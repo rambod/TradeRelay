@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TradeRelay.Desktop.ViewModels;
 using TradeRelay.Desktop.Views;
+using TradeRelay.Desktop.Services;
 using TradeRelay.Core.Settings;
 
 namespace TradeRelay.Desktop;
@@ -30,9 +31,18 @@ internal static class Program
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.AddSingleton(new AppSettings());
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<ApplicationMetadata>();
+        builder.Services.AddSingleton<LocalMcpTokenService>();
+        builder.Services.AddSingleton<LocalMcpServerHost>();
+        builder.Services.AddHostedService(services =>
+            services.GetRequiredService<LocalMcpServerHost>());
+        builder.Services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
+        builder.Services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         builder.Services.AddSingleton<App>();
         builder.Services.AddSingleton<MainWindowViewModel>();
-        builder.Services.AddTransient<MainWindow>();
+        builder.Services.AddTransient(services =>
+            new MainWindow(services.GetRequiredService<MainWindowViewModel>()));
 
         return builder.Build();
     }

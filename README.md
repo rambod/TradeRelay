@@ -3,21 +3,22 @@
 TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
 
 > [!WARNING]
-> TradeRelay is under active development. This repository currently contains only the Milestone 1 application scaffold. It must not be used for live trading.
+> TradeRelay is under active development. Milestone 2 provides a local read-only MCP status server, but no exchange connection or trading implementation. It must not be used for live trading.
 
 ## Current status
 
-Milestone 1 provides:
+Milestone 2 provides:
 
 - A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
-- A basic read-only Avalonia shell
-- Generic hosting and dependency injection setup
-- Initial exchange-neutral state enums and non-secret settings models
-- xUnit scaffold tests
+- A compact read-only desktop control panel
+- A repeatedly startable and stoppable loopback-only MCP server
+- Session-only bearer authentication with token rotation
+- The structured `get_system_status` MCP tool
+- Unit and integration coverage for lifecycle and security behavior
 
-MCP hosting, credential handling, exchange connectivity, risk validation, approvals, and all trading behavior are intentionally not implemented yet.
+Credential storage, exchange connectivity, market/account tools, risk validation, approvals, and all trading behavior are intentionally not implemented yet.
 
-Current version: `0.1.0`
+Current version: `0.2.0`
 
 ## Release roadmap
 

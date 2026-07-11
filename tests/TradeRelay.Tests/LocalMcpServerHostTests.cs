@@ -1,0 +1,194 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Sockets;
+using System.Text;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using TradeRelay.Core.Models;
+using TradeRelay.Desktop.Services;
+using Xunit;
+
+namespace TradeRelay.Tests;
+
+public sealed class LocalMcpServerHostTests
+{
+    [Fact]
+    public async Task StartAndStop_CanRepeatAndRemainLoopbackOnly()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+
+        await context.Host.StartServerAsync();
+        McpServerSnapshot firstRun = context.Host.Snapshot;
+
+        Assert.Equal(McpServerState.Running, firstRun.State);
+        Assert.True(firstRun.Port > 0);
+        Assert.Equal(IPAddress.Loopback.ToString(), new Uri(firstRun.Url).Host);
+
+        await context.Host.StartServerAsync();
+        Assert.Equal(firstRun, context.Host.Snapshot);
+
+        await context.Host.StopServerAsync();
+        Assert.Equal(McpServerState.Stopped, context.Host.Snapshot.State);
+
+        await context.Host.StopServerAsync();
+        Assert.Equal(McpServerState.Stopped, context.Host.Snapshot.State);
+
+        await context.Host.StartServerAsync();
+        Assert.Equal(McpServerState.Running, context.Host.Snapshot.State);
+
+        await context.Host.StopServerAsync();
+        Assert.Equal(McpServerState.Stopped, context.Host.Snapshot.State);
+    }
+
+    [Fact]
+    public async Task McpEndpoint_RejectsUnauthorizedRequests()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        await context.Host.StartServerAsync();
+        using var client = new HttpClient();
+        using var payload = new StringContent("{}", Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage missing = await client.PostAsync(context.Host.Snapshot.Url, payload);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, missing.StatusCode);
+        Assert.Equal("Bearer", missing.Headers.WwwAuthenticate.Single().Scheme);
+
+        using var invalidRequest = new HttpRequestMessage(HttpMethod.Post, context.Host.Snapshot.Url)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        invalidRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "wrong");
+        using HttpResponseMessage invalid = await client.SendAsync(invalidRequest);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, invalid.StatusCode);
+    }
+
+    [Fact]
+    public async Task McpEndpoint_RejectsUntrustedHostHeaders()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        await context.Host.StartServerAsync();
+        using var client = new HttpClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, context.Host.Snapshot.Url)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        request.Headers.Host = "attacker.example";
+        request.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            context.TokenService.CurrentToken);
+
+        using HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuthorizedMcpClient_CanInvokeSystemStatusWithoutReceivingToken()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        await context.Host.StartServerAsync();
+        await using McpClient client = await CreateClientAsync(
+            context.Host.Snapshot.Url,
+            context.TokenService.CurrentToken);
+
+        Assert.Equal("TradeRelay", client.ServerInfo.Name);
+        Assert.Equal("0.2.0", client.ServerInfo.Version);
+        Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
+
+        IList<McpClientTool> tools = await client.ListToolsAsync();
+        McpClientTool statusTool = Assert.Single(tools, tool => tool.Name == "get_system_status");
+        CallToolResult result = await statusTool.CallAsync();
+        string structuredContent = result.StructuredContent?.GetRawText() ?? string.Empty;
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Contains("0.2.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("ReadOnly", structuredContent, StringComparison.Ordinal);
+        Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RotateToken_RejectsOldTokenAndAcceptsNewToken()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        await context.Host.StartServerAsync();
+        string oldToken = context.TokenService.CurrentToken;
+        string newToken = context.TokenService.Rotate();
+
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        {
+            await using McpClient _ = await CreateClientAsync(context.Host.Snapshot.Url, oldToken);
+        });
+
+        await using McpClient client = await CreateClientAsync(context.Host.Snapshot.Url, newToken);
+        IList<McpClientTool> tools = await client.ListToolsAsync();
+
+        Assert.Contains(tools, tool => tool.Name == "get_system_status");
+    }
+
+    [Fact]
+    public async Task StartServerAsync_WhenPortIsOccupied_FaultsSafelyAndCanRecover()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using TestServerContext context = TestServerContext.Create(port);
+
+        await context.Host.StartServerAsync();
+
+        Assert.Equal(McpServerState.Faulted, context.Host.Snapshot.State);
+        Assert.Equal(
+            $"The local MCP server could not start on port {port}. The port may already be in use.",
+            context.Host.Snapshot.LastError);
+        Assert.DoesNotContain(context.TokenService.CurrentToken, context.Host.Snapshot.LastError, StringComparison.Ordinal);
+
+        listener.Stop();
+        await context.Host.StartServerAsync();
+
+        Assert.Equal(McpServerState.Running, context.Host.Snapshot.State);
+    }
+
+    [Fact]
+    public async Task StopServerAsync_MakesEndpointUnavailable()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        await context.Host.StartServerAsync();
+        string endpoint = context.Host.Snapshot.Url;
+        await context.Host.StopServerAsync();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+
+        await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.GetAsync(endpoint));
+    }
+
+    [Fact]
+    public async Task LifecycleLogs_DoNotContainAuthenticationData()
+    {
+        var logger = new RecordingLogger<LocalMcpServerHost>();
+        await using TestServerContext context = TestServerContext.Create(logger: logger);
+
+        await context.Host.StartServerAsync();
+        await context.Host.StopServerAsync();
+        string logs = string.Join(Environment.NewLine, logger.Messages);
+
+        Assert.DoesNotContain(context.TokenService.CurrentToken, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain("Authorization", logs, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer", logs, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<McpClient> CreateClientAsync(string endpoint, string token)
+    {
+        var transport = new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Endpoint = new Uri(endpoint),
+            TransportMode = HttpTransportMode.StreamableHttp,
+            AdditionalHeaders = new Dictionary<string, string>
+            {
+                ["Authorization"] = $"Bearer {token}"
+            }
+        });
+
+        return await McpClient.CreateAsync(transport);
+    }
+}

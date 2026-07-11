@@ -20,7 +20,7 @@ public sealed partial class MainWindow : Window
     /// Initializes a new instance of the <see cref="MainWindow"/> class.
     /// </summary>
     /// <param name="viewModel">The view model resolved by dependency injection.</param>
-    public MainWindow(MainWindowViewModel viewModel)
+    internal MainWindow(MainWindowViewModel viewModel)
         : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);

@@ -5,62 +5,214 @@
     xmlns:viewModels="using:TradeRelay.Desktop.ViewModels"
     x:DataType="viewModels:MainWindowViewModel"
     Title="{Binding ApplicationName}"
-    Width="900"
-    Height="560"
-    MinWidth="640"
-    MinHeight="420"
+    Width="1080"
+    Height="720"
+    MinWidth="820"
+    MinHeight="600"
     Background="#0E141B">
   <Grid RowDefinitions="Auto,*">
     <Border
-        Padding="28,20"
+        Padding="32,20"
         Background="#151E28"
         BorderBrush="#2A3644"
         BorderThickness="0,0,0,1">
-      <TextBlock
-          FontSize="22"
-          FontWeight="SemiBold"
-          Foreground="#F3F6F8"
-          Text="{Binding ApplicationName}" />
-    </Border>
-
-    <StackPanel
-        Grid.Row="1"
-        Width="520"
-        HorizontalAlignment="Center"
-        VerticalAlignment="Center"
-        Spacing="14">
-      <TextBlock
-          FontSize="30"
-          FontWeight="SemiBold"
-          Foreground="#F3F6F8"
-          Text="{Binding DevelopmentStatus}"
-          TextAlignment="Center"
-          TextWrapping="Wrap" />
-      <TextBlock
-          FontSize="16"
-          Foreground="#C4CED8"
-          Text="{Binding SafetyStatus}"
-          TextAlignment="Center"
-          TextWrapping="Wrap" />
-      <Border
-          Margin="0,10,0,0"
-          Padding="18"
-          Background="#172432"
-          BorderBrush="#31465A"
-          BorderThickness="1"
-          CornerRadius="10">
-        <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock
+                FontSize="23"
+                FontWeight="SemiBold"
+                Foreground="#F3F6F8"
+                Text="{Binding ApplicationName}" />
+            <Border
+                Padding="8,3"
+                VerticalAlignment="Center"
+                Background="#203649"
+                CornerRadius="6">
+              <TextBlock
+                  FontSize="12"
+                  Foreground="#B9D8EF"
+                  Text="{Binding VersionLabel}" />
+            </Border>
+          </StackPanel>
           <TextBlock
-              Foreground="#D9E3EC"
-              Text="{Binding EnvironmentStatus}"
-              TextAlignment="Center" />
+              Classes="muted"
+              Text="{Binding DevelopmentStatus}" />
+        </StackPanel>
+        <Border
+            Grid.Column="1"
+            Padding="12,7"
+            VerticalAlignment="Center"
+            Background="#17382D"
+            BorderBrush="#2C8065"
+            BorderThickness="1"
+            CornerRadius="8">
           <TextBlock
               FontWeight="SemiBold"
-              Foreground="#83D7B4"
-              Text="{Binding AccessStatus}"
-              TextAlignment="Center" />
+              Foreground="#8BE0BD"
+              Text="Read-only session" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1">
+      <Grid
+          Margin="32"
+          ColumnDefinitions="2*,3*"
+          ColumnSpacing="24">
+        <StackPanel Grid.Column="0" Spacing="18">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="sectionTitle" Text="Safety posture" />
+            <TextBlock
+                Classes="muted"
+                MaxWidth="420"
+                Text="Trading remains unavailable. This milestone exposes local system status only."
+                TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Border
+              Padding="20"
+              Background="#151E28"
+              BorderBrush="#2A3644"
+              BorderThickness="1"
+              CornerRadius="12">
+            <StackPanel Spacing="13">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Environment" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding EnvironmentStatus}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Trading access" />
+                <TextBlock Grid.Column="1" Classes="value" Foreground="#8BE0BD" Text="{Binding AccessStatus}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Live trading" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding LiveTradingStatus}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Provider" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding ProviderStatus}" />
+              </Grid>
+              <Separator Background="#2A3644" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Open positions" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenPositionCount}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Open orders" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenOrderCount}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" Text="Pending approvals" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding PendingApprovalCount}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border
+              Padding="18"
+              Background="#242218"
+              BorderBrush="#635B32"
+              BorderThickness="1"
+              CornerRadius="10">
+            <StackPanel Spacing="6">
+              <TextBlock
+                  FontWeight="SemiBold"
+                  Foreground="#F1DA85"
+                  Text="Stopping is connection-only" />
+              <TextBlock
+                  Foreground="#D5CBA8"
+                  Text="Stopping TradeRelay does not cancel exchange orders, close positions, or remove stop-loss and take-profit protection."
+                  TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
         </StackPanel>
-      </Border>
-    </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="18">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="sectionTitle" Text="Local MCP server" />
+            <TextBlock
+                Classes="muted"
+                Text="Loopback-only Streamable HTTP with bearer authentication."
+                TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Border
+              Padding="22"
+              Background="#151E28"
+              BorderBrush="#2A3644"
+              BorderThickness="1"
+              CornerRadius="12">
+            <StackPanel Spacing="17">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="3">
+                  <TextBlock Classes="muted" Text="Server state" />
+                  <TextBlock
+                      FontSize="26"
+                      FontWeight="SemiBold"
+                      Foreground="#F3F6F8"
+                      Text="{Binding ServerState}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="primary" Command="{Binding StartServerCommand}" Content="Start MCP" />
+                  <Button Command="{Binding StopServerCommand}" Content="Stop" />
+                </StackPanel>
+              </Grid>
+
+              <Separator Background="#2A3644" />
+
+              <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
+                <TextBlock Classes="muted" Text="Endpoint" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding Endpoint}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Classes="muted" Text="Port" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Classes="value" Text="{Binding Port}" />
+                <TextBlock Grid.Row="2" Classes="muted" Text="Authentication" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Classes="value" Text="{Binding AuthenticationStatus}" />
+                <TextBlock Grid.Row="3" Classes="muted" Text="Sessions" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Classes="value" Text="{Binding SessionStatus}" />
+                <TextBlock Grid.Row="4" Classes="muted" Text="Last error" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Classes="value" Text="{Binding LastError}" TextWrapping="Wrap" />
+              </Grid>
+
+              <Separator Background="#2A3644" />
+
+              <StackPanel Spacing="9">
+                <TextBlock FontWeight="SemiBold" Foreground="#E7EDF3" Text="Session bearer token" />
+                <TextBox
+                    Padding="12,10"
+                    Background="#0E141B"
+                    BorderBrush="#344354"
+                    FontFamily="Menlo,Consolas,monospace"
+                    IsReadOnly="True"
+                    Text="{Binding DisplayedToken}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="quiet" Command="{Binding ToggleTokenVisibilityCommand}" Content="{Binding TokenVisibilityAction}" />
+                  <Button Classes="quiet" Command="{Binding CopyTokenCommand}" Content="Copy token" />
+                  <Button Classes="quiet" Command="{Binding RotateTokenCommand}" Content="Rotate token" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="9">
+                <TextBlock FontWeight="SemiBold" Foreground="#E7EDF3" Text="Client setup" />
+                <TextBlock
+                    Classes="muted"
+                    Text="Copied configuration references TRADERELAY_MCP_TOKEN and never embeds the token value."
+                    TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Command="{Binding CopyCodexConfigCommand}" Content="Copy Codex config" />
+                  <Button Command="{Binding CopyClaudeCodeCommand}" Content="Copy Claude Code command" />
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <TextBlock
+              MinHeight="22"
+              Foreground="#8BE0BD"
+              Text="{Binding ActionMessage}"
+              TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
   </Grid>
 </Window>
