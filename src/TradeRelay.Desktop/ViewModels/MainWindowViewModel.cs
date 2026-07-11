@@ -1,7 +1,7 @@
 using TradeRelay.Core.Models;
 using TradeRelay.Core.Settings;
 
-namespace TradeRelay.App.ViewModels;
+namespace TradeRelay.Desktop.ViewModels;
 
 /// <summary>
 /// Supplies the static Milestone 1 status shown by the desktop shell.

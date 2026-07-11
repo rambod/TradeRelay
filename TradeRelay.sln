@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeRelay.App", "src\TradeRelay.App\TradeRelay.App.csproj", "{E81AD17F-07B8-4F1B-9ED8-8324A9B19CC3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeRelay.Desktop", "src\TradeRelay.Desktop\TradeRelay.Desktop.csproj", "{E81AD17F-07B8-4F1B-9ED8-8324A9B19CC3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeRelay.Core", "src\TradeRelay.Core\TradeRelay.Core.csproj", "{56EC7388-0441-4282-806B-F8EDC4305946}"
 EndProject

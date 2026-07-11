@@ -2,9 +2,9 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using TradeRelay.App.Views;
+using TradeRelay.Desktop.Views;
 
-namespace TradeRelay.App;
+namespace TradeRelay.Desktop;
 
 /// <summary>
 /// Initializes the Avalonia application and resolves its main window from dependency injection.

@@ -1,11 +1,11 @@
 using Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using TradeRelay.App.ViewModels;
-using TradeRelay.App.Views;
+using TradeRelay.Desktop.ViewModels;
+using TradeRelay.Desktop.Views;
 using TradeRelay.Core.Settings;
 
-namespace TradeRelay.App;
+namespace TradeRelay.Desktop;
 
 internal static class Program
 {

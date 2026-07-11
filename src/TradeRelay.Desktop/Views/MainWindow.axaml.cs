@@ -1,7 +1,7 @@
 using Avalonia.Controls;
-using TradeRelay.App.ViewModels;
+using TradeRelay.Desktop.ViewModels;
 
-namespace TradeRelay.App.Views;
+namespace TradeRelay.Desktop.Views;
 
 /// <summary>
 /// Hosts the initial TradeRelay desktop shell.

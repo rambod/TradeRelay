@@ -17,6 +17,20 @@ Milestone 1 provides:
 
 MCP hosting, credential handling, exchange connectivity, risk validation, approvals, and all trading behavior are intentionally not implemented yet.
 
+Current version: `0.1.0`
+
+## Release roadmap
+
+| Milestone | Version |
+| --- | --- |
+| 1 — Scaffold and naming correction | `0.1.0` |
+| 2 — Control panel and MCP host | `0.2.0` |
+| 3 — Credentials and read-only exchange connection | `0.3.0` |
+| 4 — Risk engine and order preparation | `0.4.0` |
+| 5 — Demo execution | `0.5.0` |
+| 6 — Live safety | `0.6.0` |
+| 7 — Production-ready release | `1.0.0` |
+
 ## Development
 
 Prerequisites:
@@ -33,13 +47,13 @@ dotnet test
 Run the desktop shell:
 
 ```bash
-dotnet run --project src/TradeRelay.App
+dotnet run --project src/TradeRelay.Desktop
 ```
 
 ## Project structure
 
 ```text
-src/TradeRelay.App/             Avalonia shell and application composition
+src/TradeRelay.Desktop/         Avalonia shell and application composition
 src/TradeRelay.Core/            Exchange-neutral models and settings
 src/TradeRelay.Providers.Bybit/ Bybit adapter boundary
 tests/TradeRelay.Tests/         Unit tests
