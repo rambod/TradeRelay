@@ -1,0 +1,66 @@
+<Window
+    x:Class="TradeRelay.App.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="using:TradeRelay.App.ViewModels"
+    x:DataType="viewModels:MainWindowViewModel"
+    Title="{Binding ApplicationName}"
+    Width="900"
+    Height="560"
+    MinWidth="640"
+    MinHeight="420"
+    Background="#0E141B">
+  <Grid RowDefinitions="Auto,*">
+    <Border
+        Padding="28,20"
+        Background="#151E28"
+        BorderBrush="#2A3644"
+        BorderThickness="0,0,0,1">
+      <TextBlock
+          FontSize="22"
+          FontWeight="SemiBold"
+          Foreground="#F3F6F8"
+          Text="{Binding ApplicationName}" />
+    </Border>
+
+    <StackPanel
+        Grid.Row="1"
+        Width="520"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Spacing="14">
+      <TextBlock
+          FontSize="30"
+          FontWeight="SemiBold"
+          Foreground="#F3F6F8"
+          Text="{Binding DevelopmentStatus}"
+          TextAlignment="Center"
+          TextWrapping="Wrap" />
+      <TextBlock
+          FontSize="16"
+          Foreground="#C4CED8"
+          Text="{Binding SafetyStatus}"
+          TextAlignment="Center"
+          TextWrapping="Wrap" />
+      <Border
+          Margin="0,10,0,0"
+          Padding="18"
+          Background="#172432"
+          BorderBrush="#31465A"
+          BorderThickness="1"
+          CornerRadius="10">
+        <StackPanel Spacing="8">
+          <TextBlock
+              Foreground="#D9E3EC"
+              Text="{Binding EnvironmentStatus}"
+              TextAlignment="Center" />
+          <TextBlock
+              FontWeight="SemiBold"
+              Foreground="#83D7B4"
+              Text="{Binding AccessStatus}"
+              TextAlignment="Center" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</Window>
