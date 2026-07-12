@@ -10,17 +10,17 @@ public sealed class AppSettings
     /// <summary>
     /// Gets the local MCP server settings.
     /// </summary>
-    public ServerSettings Server { get; init; } = new();
+    public ServerSettings Server { get; set; } = new();
 
     /// <summary>
     /// Gets the Bybit environment and credential-retention preferences.
     /// </summary>
-    public BybitSettings Bybit { get; init; } = new();
+    public BybitSettings Bybit { get; set; } = new();
 
     /// <summary>
     /// Gets the configured trading risk limits.
     /// </summary>
-    public RiskSettings Risk { get; init; } = new();
+    public RiskSettings Risk { get; set; } = new();
 }
 
 /// <summary>
@@ -31,12 +31,12 @@ public sealed class ServerSettings
     /// <summary>
     /// Gets the loopback port used by the local MCP server.
     /// </summary>
-    public int Port { get; init; } = 5050;
+    public int Port { get; set; } = 5050;
 
     /// <summary>
     /// Gets a value indicating whether the MCP server should start with the desktop application.
     /// </summary>
-    public bool StartAutomatically { get; init; }
+    public bool StartAutomatically { get; set; }
 }
 
 /// <summary>
@@ -47,12 +47,12 @@ public sealed class BybitSettings
     /// <summary>
     /// Gets the selected trading environment.
     /// </summary>
-    public TradingEnvironment Environment { get; init; } = TradingEnvironment.Demo;
+    public TradingEnvironment Environment { get; set; } = TradingEnvironment.Demo;
 
     /// <summary>
     /// Gets a value indicating whether protected device storage should be requested for credentials.
     /// </summary>
-    public bool RememberCredentials { get; init; }
+    public bool RememberCredentials { get; set; }
 }
 
 /// <summary>
@@ -63,7 +63,7 @@ public sealed class RiskSettings
     /// <summary>
     /// Gets the symbols that may pass risk validation.
     /// </summary>
-    public IReadOnlySet<string> AllowedSymbols { get; init; } = new HashSet<string>(
+    public HashSet<string> AllowedSymbols { get; set; } = new(
         ["BTCUSDT", "ETHUSDT", "XRPUSDT"],
         StringComparer.Ordinal);
 

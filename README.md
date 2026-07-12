@@ -3,22 +3,34 @@
 TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
 
 > [!WARNING]
-> TradeRelay is under active development. Milestone 2 provides a local read-only MCP status server, but no exchange connection or trading implementation. It must not be used for live trading.
+> TradeRelay is under active development. Milestone 3 provides read-only Bybit connectivity, but no order preparation or trading implementation. It must not be used for live trading.
 
 ## Current status
 
-Milestone 2 provides:
+Milestone 3 provides:
 
 - A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
-- A compact read-only desktop control panel
+- Dashboard and credential control panels
 - A repeatedly startable and stoppable loopback-only MCP server
-- Session-only bearer authentication with token rotation
-- The structured `get_system_status` MCP tool
-- Unit and integration coverage for lifecycle and security behavior
+- Protected bearer-token storage with session fallback and token rotation
+- Session-only credentials by default, with optional macOS Keychain, Windows DPAPI, or Linux Secret Service persistence
+- Bybit Demo and Live credential validation with withdrawal-permission rejection
+- Read-only USDT perpetual market, Unified Account, order, position, and WebSocket-health access
+- MCP tools for system status, connection status, tickers, candles, instruments, order books, balances, positions, and open orders
+- Unit, Kestrel integration, security, and optional Bybit Demo integration coverage
 
-Credential storage, exchange connectivity, market/account tools, risk validation, approvals, and all trading behavior are intentionally not implemented yet.
+Risk validation, order preparation, approvals, and all exchange write behavior are intentionally not implemented yet. Even a read/write API key remains read-only inside TradeRelay.
 
-Current version: `0.2.0`
+Current version: `0.3.0`
+
+## Credential safety
+
+- Use Bybit Demo first and create separate Demo credentials.
+- Never use an API key with withdrawal permission; TradeRelay rejects it.
+- Leave **Remember credentials** disabled for session-only storage.
+- When enabled, TradeRelay uses the operating system's protected credential store and never writes credentials to `settings.json`.
+
+Optional Bybit Demo integration tests use `TRADERELAY_BYBIT_DEMO_API_KEY` and `TRADERELAY_BYBIT_DEMO_API_SECRET`. They do nothing when those variables are absent and never target Live.
 
 ## Release roadmap
 

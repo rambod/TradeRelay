@@ -17,6 +17,7 @@ public sealed class MainWindowViewModelTests
             context.Settings,
             context.Host,
             context.TokenService,
+            context.ConnectionManager,
             context.Metadata,
             clipboard,
             new ImmediateUiDispatcher(),
@@ -53,6 +54,7 @@ public sealed class MainWindowViewModelTests
             context.Settings,
             context.Host,
             context.TokenService,
+            context.ConnectionManager,
             context.Metadata,
             new RecordingClipboardService(),
             new ImmediateUiDispatcher(),
@@ -76,6 +78,38 @@ public sealed class MainWindowViewModelTests
         Assert.Equal(McpServerState.Stopped.ToString(), viewModel.ServerState);
         Assert.True(viewModel.StartServerCommand.CanExecute(null));
         Assert.False(viewModel.StopServerCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CredentialCommands_TestSaveMaskAndDeleteWithoutExposingSecret()
+    {
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory());
+        using var viewModel = new MainWindowViewModel(
+            context.Settings,
+            context.Host,
+            context.TokenService,
+            context.ConnectionManager,
+            context.Metadata,
+            new RecordingClipboardService(),
+            new ImmediateUiDispatcher(),
+            TimeProvider.System);
+        viewModel.ShowCredentialsCommand.Execute(null);
+        viewModel.ApiKey = "test-api-key";
+        viewModel.ApiSecret = "test-api-secret";
+
+        await viewModel.TestConnectionCommand.ExecuteAsync(null);
+        Assert.Contains("Read-only", viewModel.PermissionSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("test-api-secret", viewModel.PermissionSummary, StringComparison.Ordinal);
+
+        await viewModel.SaveCredentialsCommand.ExecuteAsync(null);
+        Assert.Equal(string.Empty, viewModel.ApiKey);
+        Assert.Equal(string.Empty, viewModel.ApiSecret);
+        Assert.Equal("••••••-key", viewModel.SavedKeyPreview);
+        Assert.Equal(ServiceHealthState.Healthy.ToString(), viewModel.RestHealth);
+
+        await viewModel.DeleteCredentialsCommand.ExecuteAsync(null);
+        Assert.Equal("None", viewModel.SavedKeyPreview);
+        Assert.Contains("deleted", viewModel.CredentialActionStatus, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class RecordingClipboardService : IClipboardService

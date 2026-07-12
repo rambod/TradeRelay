@@ -8,7 +8,7 @@ using TradeRelay.Desktop.Services;
 namespace TradeRelay.Desktop.ViewModels;
 
 /// <summary>
-/// Coordinates the Milestone 2 desktop dashboard and local MCP server controls.
+/// Coordinates the desktop dashboard, credentials, and local MCP server controls.
 /// </summary>
 internal sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
@@ -17,11 +17,23 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private readonly AppSettings _settings;
     private readonly LocalMcpServerHost _serverHost;
     private readonly LocalMcpTokenService _tokenService;
+    private readonly ExchangeConnectionManager _connectionManager;
     private readonly IClipboardService _clipboardService;
     private readonly IUiDispatcher _uiDispatcher;
     private readonly TimeProvider _timeProvider;
     private CancellationTokenSource? _messageClearCancellation;
     private McpServerSnapshot _serverSnapshot;
+    private ProviderConnectionSnapshot _providerSnapshot;
+
+    [ObservableProperty] private bool _isDashboardSelected = true;
+    [ObservableProperty] private bool _isCredentialsSelected;
+    [ObservableProperty] private TradingEnvironment _selectedEnvironment;
+    [ObservableProperty] private string _apiKey = string.Empty;
+    [ObservableProperty] private string _apiSecret = string.Empty;
+    [ObservableProperty] private bool _rememberCredentials;
+    [ObservableProperty] private string _credentialActionStatus = "Enter Bybit Demo credentials to test the read-only connection.";
+    [ObservableProperty] private string _permissionSummary = "Not connected";
+    [ObservableProperty] private string _credentialWarnings = "None";
 
     [ObservableProperty]
     private bool _isTokenRevealed;
@@ -36,6 +48,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         AppSettings settings,
         LocalMcpServerHost serverHost,
         LocalMcpTokenService tokenService,
+        ExchangeConnectionManager connectionManager,
         ApplicationMetadata metadata,
         IClipboardService clipboardService,
         IUiDispatcher uiDispatcher,
@@ -44,6 +57,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _serverHost = serverHost ?? throw new ArgumentNullException(nameof(serverHost));
         _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
         _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
         _uiDispatcher = uiDispatcher ?? throw new ArgumentNullException(nameof(uiDispatcher));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -51,7 +65,11 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
         AppVersion = metadata.Version;
         _serverSnapshot = serverHost.Snapshot;
+        _providerSnapshot = connectionManager.Snapshot;
+        _selectedEnvironment = settings.Bybit.Environment;
+        _rememberCredentials = settings.Bybit.RememberCredentials;
         _serverHost.StateChanged += OnServerStateChanged;
+        _connectionManager.StateChanged += OnProviderStateChanged;
     }
 
     /// <summary>
@@ -72,7 +90,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current development milestone label.
     /// </summary>
-    public string DevelopmentStatus => "Milestone 2 · Local MCP control";
+    public string DevelopmentStatus => "Milestone 3 · Secure read-only exchange connection";
+
+    public IReadOnlyList<TradingEnvironment> Environments { get; } = Enum.GetValues<TradingEnvironment>();
 
     /// <summary>
     /// Gets the current server snapshot.
@@ -111,12 +131,12 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the most recent safe server error.
     /// </summary>
-    public string LastError => ServerSnapshot.LastError ?? "None";
+    public string LastError => ServerSnapshot.LastError ?? _providerSnapshot.LastError ?? "None";
 
     /// <summary>
     /// Gets the selected environment label.
     /// </summary>
-    public string EnvironmentStatus => _settings.Bybit.Environment.ToString();
+    public string EnvironmentStatus => _providerSnapshot.Environment.ToString();
 
     /// <summary>
     /// Gets the startup trading access mode.
@@ -131,22 +151,29 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the selected provider status.
     /// </summary>
-    public string ProviderStatus => "Bybit · Not configured";
+    public string ProviderStatus => $"Bybit · {_providerSnapshot.RestHealth}";
 
     /// <summary>
     /// Gets the current open-position count.
     /// </summary>
-    public string OpenPositionCount => "0";
+    public string OpenPositionCount => _providerSnapshot.OpenPositionCount.ToString();
 
     /// <summary>
     /// Gets the current open-order count.
     /// </summary>
-    public string OpenOrderCount => "0";
+    public string OpenOrderCount => _providerSnapshot.OpenOrderCount.ToString();
 
     /// <summary>
     /// Gets the current pending-approval count.
     /// </summary>
     public string PendingApprovalCount => "0";
+
+    public string RestHealth => _providerSnapshot.RestHealth.ToString();
+    public string StreamHealth => _providerSnapshot.StreamHealth.ToString();
+    public string SavedKeyPreview => _providerSnapshot.SavedKeyPreview ?? "None";
+    public string CredentialStorageStatus => _connectionManager.Snapshot.CredentialLoaded
+        ? (_settings.Bybit.RememberCredentials ? "Protected on this device" : "Session only")
+        : (_connectionManager.Snapshot.CredentialInfo is null ? "Not saved" : "Session only");
 
     /// <summary>
     /// Gets the bearer token or its masked representation.
@@ -164,6 +191,43 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     {
         OnPropertyChanged(nameof(DisplayedToken));
         OnPropertyChanged(nameof(TokenVisibilityAction));
+    }
+
+    partial void OnSelectedEnvironmentChanged(TradingEnvironment value)
+    {
+        if (value != _connectionManager.Snapshot.Environment) _ = ChangeEnvironmentSafeAsync(value);
+    }
+
+    [RelayCommand]
+    private void ShowDashboard() { IsDashboardSelected = true; IsCredentialsSelected = false; }
+
+    [RelayCommand]
+    private void ShowCredentials() { IsDashboardSelected = false; IsCredentialsSelected = true; }
+
+    [RelayCommand]
+    private async Task TestConnectionAsync(CancellationToken cancellationToken)
+    {
+        CredentialActionStatus = "Testing Bybit connection…";
+        ExchangeConnectionResult result = await _connectionManager.TestAsync(SelectedEnvironment, ApiKey, ApiSecret, cancellationToken);
+        ApplyConnectionResult(result);
+    }
+
+    [RelayCommand]
+    private async Task SaveCredentialsAsync(CancellationToken cancellationToken)
+    {
+        CredentialActionStatus = "Validating and saving credentials…";
+        ExchangeConnectionResult result = await _connectionManager.SaveAsync(SelectedEnvironment, ApiKey, ApiSecret, RememberCredentials, cancellationToken);
+        ApplyConnectionResult(result);
+        if (result.Success) { ApiKey = string.Empty; ApiSecret = string.Empty; }
+    }
+
+    [RelayCommand]
+    private async Task DeleteCredentialsAsync(CancellationToken cancellationToken)
+    {
+        await _connectionManager.DeleteAsync(cancellationToken);
+        ApiKey = string.Empty; ApiSecret = string.Empty; RememberCredentials = false;
+        PermissionSummary = "Not connected"; CredentialWarnings = "None";
+        CredentialActionStatus = "Credentials deleted and the Bybit connection was closed.";
     }
 
     [RelayCommand(CanExecute = nameof(CanStartServer))]
@@ -191,9 +255,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     }
 
     [RelayCommand]
-    private void RotateToken()
+    private async Task RotateTokenAsync(CancellationToken cancellationToken)
     {
-        _tokenService.Rotate();
+        await _tokenService.RotateAsync(cancellationToken);
         OnPropertyChanged(nameof(DisplayedToken));
         ShowActionMessage("MCP token rotated. Previous token invalidated.");
     }
@@ -220,6 +284,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     public void Dispose()
     {
         _serverHost.StateChanged -= OnServerStateChanged;
+        _connectionManager.StateChanged -= OnProviderStateChanged;
         CancellationTokenSource? cancellation = Interlocked.Exchange(ref _messageClearCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
@@ -250,6 +315,43 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private void OnServerStateChanged(object? sender, McpServerSnapshot snapshot) =>
         _uiDispatcher.Post(() => ApplyServerSnapshot(snapshot));
+
+    private void OnProviderStateChanged(object? sender, ProviderConnectionSnapshot snapshot) =>
+        _uiDispatcher.Post(() => ApplyProviderSnapshot(snapshot));
+
+    private void ApplyProviderSnapshot(ProviderConnectionSnapshot snapshot)
+    {
+        _providerSnapshot = snapshot;
+        OnPropertyChanged(nameof(EnvironmentStatus)); OnPropertyChanged(nameof(ProviderStatus));
+        OnPropertyChanged(nameof(OpenPositionCount)); OnPropertyChanged(nameof(OpenOrderCount));
+        OnPropertyChanged(nameof(RestHealth)); OnPropertyChanged(nameof(StreamHealth));
+        OnPropertyChanged(nameof(SavedKeyPreview)); OnPropertyChanged(nameof(CredentialStorageStatus));
+        OnPropertyChanged(nameof(LastError));
+        if (snapshot.CredentialInfo is not null)
+        {
+            PermissionSummary = BuildPermissionSummary(snapshot.CredentialInfo);
+            CredentialWarnings = snapshot.CredentialInfo.Warnings.Count == 0 ? "None" : string.Join(Environment.NewLine, snapshot.CredentialInfo.Warnings.Select(x => $"• {x}"));
+        }
+    }
+
+    private void ApplyConnectionResult(ExchangeConnectionResult result)
+    {
+        CredentialActionStatus = result.Message;
+        if (result.CredentialInfo is not null)
+        {
+            PermissionSummary = BuildPermissionSummary(result.CredentialInfo);
+            CredentialWarnings = result.CredentialInfo.Warnings.Count == 0 ? "None" : string.Join(Environment.NewLine, result.CredentialInfo.Warnings.Select(x => $"• {x}"));
+        }
+    }
+
+    private async Task ChangeEnvironmentSafeAsync(TradingEnvironment environment)
+    {
+        try { await _connectionManager.ChangeEnvironmentAsync(environment, CancellationToken.None); CredentialActionStatus = $"Switched to {environment}. Previous connection closed."; }
+        catch { CredentialActionStatus = "The environment could not be changed."; }
+    }
+
+    private static string BuildPermissionSummary(ApiCredentialInfo info) =>
+        $"{info.Summary} · Trading: {(info.HasTradingPermission ? "Yes" : "No")} · Wallet: {(info.HasWalletPermission ? "Yes" : "No")} · Withdrawal: {(info.HasWithdrawalPermission ? "Detected" : "No")} · IP-bound: {(info.IsIpBound ? "Yes" : "No")} · {(info.IsMasterAccount ? "Master account" : "Subaccount")}";
 
     private void ApplyServerSnapshot(McpServerSnapshot snapshot)
     {

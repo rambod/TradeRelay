@@ -19,6 +19,7 @@ internal sealed class LocalMcpServerHost(
     LocalMcpTokenService tokenService,
     ApplicationMetadata metadata,
     TimeProvider timeProvider,
+    ExchangeConnectionManager connectionManager,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -52,6 +53,8 @@ internal sealed class LocalMcpServerHost(
                 State = McpServerState.Starting,
                 LastError = null
             });
+
+            await connectionManager.EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
 
             WebApplication application = BuildApplication();
             _application = application;
@@ -134,6 +137,8 @@ internal sealed class LocalMcpServerHost(
                 }
             }
 
+            await connectionManager.DisconnectAsync(cancellationToken).ConfigureAwait(false);
+
             SetSnapshot(Snapshot with
             {
                 State = McpServerState.Stopped,
@@ -184,6 +189,7 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(metadata);
         builder.Services.AddSingleton(timeProvider);
         builder.Services.AddSingleton(this);
+        builder.Services.AddSingleton(connectionManager);
 
         builder.Services
             .AddMcpServer(mcp =>
@@ -196,7 +202,10 @@ internal sealed class LocalMcpServerHost(
                 mcp.ServerInstructions = McpServerInstructions.Value;
             })
             .WithHttpTransport(transport => transport.Stateless = true)
-            .WithTools<SystemTools>();
+            .WithTools<SystemTools>()
+            .WithTools<ConnectionTools>()
+            .WithTools<MarketTools>()
+            .WithTools<AccountTools>();
 
         WebApplication application = builder.Build();
         application.UseHostFiltering();

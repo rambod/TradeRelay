@@ -93,7 +93,7 @@ public sealed class LocalMcpServerHostTests
             context.TokenService.CurrentToken);
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
-        Assert.Equal("0.2.0", client.ServerInfo.Version);
+        Assert.Equal("0.3.0", client.ServerInfo.Version);
         Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
@@ -103,10 +103,46 @@ public sealed class LocalMcpServerHostTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        Assert.Contains("0.2.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("0.3.0", structuredContent, StringComparison.Ordinal);
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
         Assert.Contains("ReadOnly", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
+        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders"];
+        foreach (string name in expected) Assert.Contains(tools, tool => tool.Name == name);
+    }
+
+    [Fact]
+    public async Task AuthorizedMcpClient_CanInvokeEveryReadOnlyMilestoneThreeTool()
+    {
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory());
+        ExchangeConnectionResult saved = await context.ConnectionManager.SaveAsync(TradingEnvironment.Demo, "test-key", "test-secret", false, default);
+        Assert.True(saved.Success);
+        await context.Host.StartServerAsync();
+        await using McpClient client = await CreateClientAsync(context.Host.Snapshot.Url, context.TokenService.CurrentToken);
+        IList<McpClientTool> tools = await client.ListToolsAsync();
+
+        var calls = new (string Name, IReadOnlyDictionary<string, object?>? Arguments)[]
+        {
+            ("test_bybit_connection", null),
+            ("get_ticker", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT" }),
+            ("get_candles", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["interval"] = "15m", ["limit"] = 10 }),
+            ("get_instrument_info", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT" }),
+            ("get_order_book", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["depth"] = 25 }),
+            ("get_account_summary", null),
+            ("get_wallet_balances", null),
+            ("get_positions", null),
+            ("get_open_orders", null)
+        };
+
+        foreach ((string name, IReadOnlyDictionary<string, object?>? arguments) in calls)
+        {
+            McpClientTool tool = Assert.Single(tools, item => item.Name == name);
+            CallToolResult result = await tool.CallAsync(arguments);
+            Assert.NotEqual(true, result.IsError);
+            string json = result.StructuredContent?.GetRawText() ?? string.Empty;
+            Assert.Contains("\"success\":true", json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("test-secret", json, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

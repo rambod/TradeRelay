@@ -10,6 +10,7 @@ namespace TradeRelay.Desktop.Mcp;
 internal sealed class SystemTools(
     LocalMcpServerHost serverHost,
     AppSettings settings,
+    ExchangeConnectionManager connectionManager,
     ApplicationMetadata metadata,
     TimeProvider timeProvider)
 {
@@ -29,6 +30,7 @@ internal sealed class SystemTools(
             ? settings.Risk.RequireManualApprovalForLive
             : settings.Risk.RequireManualApprovalForDemo;
         McpServerSnapshot server = serverHost.Snapshot;
+        ProviderConnectionSnapshot provider = connectionManager.Snapshot;
 
         var status = new SystemStatusSnapshot(
             metadata.Version,
@@ -39,10 +41,10 @@ internal sealed class SystemTools(
             TradingAccessMode.ReadOnly,
             LiveTradingEnabled: false,
             manualApprovalRequired,
-            ServiceHealthState.NotConfigured,
-            ServiceHealthState.NotConfigured,
-            CredentialLoaded: false,
-            CredentialTypeSummary: "None",
+            provider.RestHealth,
+            provider.StreamHealth,
+            provider.CredentialLoaded,
+            provider.CredentialSummary,
             PendingApprovalCount: 0,
             timestamp);
 

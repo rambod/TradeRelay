@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TradeRelay.Core\TradeRelay.Core.csproj" />
     <ProjectReference Include="..\..\src\TradeRelay.Desktop\TradeRelay.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\TradeRelay.Providers.Bybit\TradeRelay.Providers.Bybit.csproj" />
   </ItemGroup>
 
 </Project>
