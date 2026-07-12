@@ -81,6 +81,37 @@ public sealed class PreparedOrderStoreTests
         Assert.Equal(hash, store.Get(order.PreparationId)?.ImmutableHash);
     }
 
+    [Fact]
+    public async Task ExecutionClaim_AllowsOneCallerAndStoresOutcomeWithoutChangingHash()
+    {
+        var store = new PreparedOrderStore(TimeProvider.System);
+        PreparedOrder order = Assert.IsType<PreparedOrder>(store.Add("execute-race", Validation(), TradingEnvironment.Demo, Snapshot(false)).Order);
+
+        PreparedOrderResult[] claims = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => store.BeginExecution(order.PreparationId, order.ImmutableHash))));
+
+        PreparedOrderResult claim = Assert.Single(claims, result => result.Success);
+        Assert.Equal(PreparedOrderState.Executing, claim.Order?.State);
+        var submission = new OrderSubmissionResult(true, true, "exchange-1", order.ClientOrderId, ExchangeOrderStatus.PartiallyFilled, 1m, .4m, .6m, 101m, "Reconciled.", DateTimeOffset.UtcNow);
+        PreparedOrderResult completed = store.CompleteExecution(order.PreparationId, submission);
+        Assert.True(completed.Success);
+        Assert.Equal(PreparedOrderState.Executed, completed.Order?.State);
+        Assert.Equal(order.ImmutableHash, completed.Order?.ImmutableHash);
+        Assert.Equal(.4m, completed.Order?.Submission?.FilledQuantity);
+        Assert.False(store.BeginExecution(order.PreparationId, order.ImmutableHash).Success);
+    }
+
+    [Fact]
+    public void ExecutionRequiresCurrentApprovalAndRejectsExpiredPlan()
+    {
+        var time = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        var store = new PreparedOrderStore(time);
+        PreparedOrder pending = Assert.IsType<PreparedOrder>(store.Add("pending-execution", Validation(), TradingEnvironment.Demo, Snapshot(true)).Order);
+        Assert.Equal("APPROVAL_REQUIRED", store.BeginExecution(pending.PreparationId, pending.ImmutableHash).Code);
+        Assert.True(store.Approve(pending.PreparationId, pending.ImmutableHash).Success);
+        time.Advance(TimeSpan.FromSeconds(121));
+        Assert.Equal("ORDER_EXPIRED", store.BeginExecution(pending.PreparationId, pending.ImmutableHash).Code);
+    }
+
     private static OrderValidationResult Validation()
     {
         var risk = new RiskEstimate(100m, 10m, 20m, 2m, 1m);

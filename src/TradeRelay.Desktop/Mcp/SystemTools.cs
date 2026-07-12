@@ -13,6 +13,7 @@ internal sealed class SystemTools(
     AppSettings settings,
     ExchangeConnectionManager connectionManager,
     PreparedOrderStore preparedOrderStore,
+    TradingControlService tradingControl,
     ApplicationMetadata metadata,
     TimeProvider timeProvider)
 {
@@ -40,7 +41,7 @@ internal sealed class SystemTools(
             server.Url,
             "Bybit",
             environment,
-            TradingAccessMode.ReadOnly,
+            tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled,
             LiveTradingEnabled: false,
             manualApprovalRequired,
             provider.RestHealth,

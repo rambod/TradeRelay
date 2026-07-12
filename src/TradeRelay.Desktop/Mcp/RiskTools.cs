@@ -11,6 +11,7 @@ namespace TradeRelay.Desktop.Mcp;
 internal sealed class RiskTools(
     OrderPreparationService preparationService,
     PreparedOrderStore preparedOrderStore,
+    AuditLogService audit,
     AppSettings settings,
     TimeProvider timeProvider)
 {
@@ -44,31 +45,33 @@ internal sealed class RiskTools(
     }
 
     [McpServerTool(Name = "prepare_order", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
-    [Description("Creates an expiring immutable local simulation. It cannot place or execute an exchange order.")]
+    [Description("Creates an expiring immutable local plan. This tool does not place an order; execution is a separate gated Demo operation.")]
     public async Task<ToolResult<PreparedOrderResult>> PrepareOrderAsync(string clientRequestId, string symbol, string side, string orderType, decimal quantity, decimal? limitPrice = null, decimal? stopLoss = null, decimal? takeProfit = null, decimal? requestedLeverage = null, string? userNote = null, CancellationToken cancellationToken = default)
     {
-        if (!TryParse(side, orderType, out TradeSide parsedSide, out OrderType parsedType)) return ToolResponse.Failure<PreparedOrderResult>("VALIDATION_FAILED", "side must be Buy or Sell and orderType must be Market or Limit.", settings.Bybit.Environment, timeProvider);
+        string correlationId = ToolResponse.NewCorrelationId();
+        if (!TryParse(side, orderType, out TradeSide parsedSide, out OrderType parsedType)) return ToolResponse.Correlated<PreparedOrderResult>(false, "VALIDATION_FAILED", "side must be Buy or Sell and orderType must be Market or Limit.", null, correlationId, settings.Bybit.Environment, timeProvider);
         try
         {
             PreparedOrderResult result = await preparationService.PrepareAsync(new PrepareOrderRequest(clientRequestId, symbol, parsedSide, parsedType, quantity, limitPrice, stopLoss, takeProfit, requestedLeverage, userNote), cancellationToken).ConfigureAwait(false);
-            return ToolResponse.Result(result.Success, result.Code, result.Message, result, settings.Bybit.Environment, timeProvider);
+            await audit.TryWriteAsync(audit.Create("prepare_order", "order_prepared", result.Success ? "OK" : "FAILED", settings.Bybit.Environment, correlationId, result.Order?.Order.Symbol ?? RiskEngine.NormalizeSymbol(symbol), result.Order?.PreparationId, result.Order?.ClientOrderId, approvalState: result.Order?.State.ToString(), errorCode: result.Success ? null : result.Code), cancellationToken).ConfigureAwait(false);
+            return ToolResponse.Correlated(result.Success, result.Code, result.Message, result, correlationId, settings.Bybit.Environment, timeProvider);
         }
-        catch (ProviderException exception) { return ToolResponse.Failure<PreparedOrderResult>(exception.Code, exception.Message, settings.Bybit.Environment, timeProvider); }
+        catch (ProviderException exception) { return ToolResponse.Correlated<PreparedOrderResult>(false, exception.Code, exception.Message, null, correlationId, settings.Bybit.Environment, timeProvider); }
     }
 
     [McpServerTool(Name = "get_prepared_order", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Gets one non-executable prepared simulation by preparation ID.")]
+    [Description("Gets one immutable prepared plan and its current approval or Demo execution state by preparation ID.")]
     public ToolResult<PreparedOrder> GetPreparedOrder(string preparationId)
     {
         if (!Guid.TryParse(preparationId, out Guid id)) return ToolResponse.Failure<PreparedOrder>("VALIDATION_FAILED", "preparationId is invalid.", settings.Bybit.Environment, timeProvider);
         PreparedOrder? order = preparedOrderStore.Get(id);
-        if (order is null) return ToolResponse.Failure<PreparedOrder>("VALIDATION_FAILED", "Prepared simulation not found.", settings.Bybit.Environment, timeProvider);
-        return ToolResponse.Result(order.State != PreparedOrderState.Expired, order.State == PreparedOrderState.Expired ? "ORDER_EXPIRED" : "OK", order.State == PreparedOrderState.Expired ? "Prepared simulation has expired." : "Prepared simulation retrieved.", order, settings.Bybit.Environment, timeProvider);
+        if (order is null) return ToolResponse.Failure<PreparedOrder>("VALIDATION_FAILED", "Prepared plan not found.", settings.Bybit.Environment, timeProvider);
+        return ToolResponse.Result(order.State != PreparedOrderState.Expired, order.State == PreparedOrderState.Expired ? "ORDER_EXPIRED" : "OK", order.State == PreparedOrderState.Expired ? "Prepared plan has expired." : "Prepared plan retrieved.", order, settings.Bybit.Environment, timeProvider);
     }
 
     [McpServerTool(Name = "get_pending_approvals", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Gets unexpired simulations awaiting human approval. No credentials or internal tokens are returned.")]
-    public ToolResult<IReadOnlyList<PreparedOrder>> GetPendingApprovals() => ToolResponse.Success(preparedOrderStore.GetPending(), "Pending approval simulations retrieved.", settings.Bybit.Environment, timeProvider);
+    [Description("Gets unexpired plans awaiting human approval. No credentials or internal tokens are returned.")]
+    public ToolResult<IReadOnlyList<PreparedOrder>> GetPendingApprovals() => ToolResponse.Success(preparedOrderStore.GetPending(), "Pending approval plans retrieved.", settings.Bybit.Environment, timeProvider);
 
     private static bool TryParse(string side, string orderType, out TradeSide parsedSide, out OrderType parsedType)
     {

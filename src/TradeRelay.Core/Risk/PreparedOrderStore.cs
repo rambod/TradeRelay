@@ -7,7 +7,7 @@ using TradeRelay.Core.Models;
 
 namespace TradeRelay.Core.Risk;
 
-/// <summary>Stores immutable prepared simulations for the current process.</summary>
+/// <summary>Stores immutable prepared plans and execution state for the current process.</summary>
 public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
 {
     private readonly ConcurrentDictionary<Guid, PreparedOrder> _orders = new();
@@ -39,7 +39,7 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
             return Failure("INTERNAL_ERROR", "The prepared simulation could not be stored.");
         }
         RaiseChanged(order);
-        return new(true, "OK", state == PreparedOrderState.Approved ? "Simulation prepared and auto-approved by the current Demo policy." : "Simulation prepared and awaiting desktop approval.", order);
+        return new(true, "OK", state == PreparedOrderState.Approved ? "Plan prepared and auto-approved by the current Demo policy." : "Plan prepared and awaiting desktop approval.", order);
     }
 
     /// <summary>Gets a prepared order, atomically expiring it when necessary.</summary>
@@ -57,14 +57,35 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
     /// <summary>Rejects a pending order only when its immutable hash still matches.</summary>
     public PreparedOrderResult Reject(Guid preparationId, string expectedHash) => Transition(preparationId, expectedHash, PreparedOrderState.Rejected);
 
+    /// <summary>Atomically claims an approved plan for one execution attempt.</summary>
+    public PreparedOrderResult BeginExecution(Guid preparationId, string expectedHash)
+    {
+        while (_orders.TryGetValue(preparationId, out PreparedOrder? current))
+        {
+            current = ExpireIfNeeded(current);
+            if (current.State == PreparedOrderState.Expired) return new(false, "ORDER_EXPIRED", "The prepared order has expired.", current);
+            if (!CryptographicEquals(current.ImmutableHash, expectedHash) || !CryptographicEquals(current.ApprovedHash, expectedHash)) return new(false, "APPROVAL_REQUIRED", "The immutable plan is not currently approved.", current);
+            if (current.State != PreparedOrderState.Approved) return new(false, "DUPLICATE_REQUEST", $"A {current.State} order cannot begin execution.", current);
+            PreparedOrder executing = current with { State = PreparedOrderState.Executing, ExecutionStartedAtUtc = timeProvider.GetUtcNow() };
+            if (_orders.TryUpdate(preparationId, executing, current)) { RaiseChanged(executing); return new(true, "OK", "Prepared order claimed for execution.", executing); }
+        }
+        return Failure("VALIDATION_FAILED", "The prepared order was not found.");
+    }
+
+    /// <summary>Stores a reconciled execution result.</summary>
+    public PreparedOrderResult CompleteExecution(Guid preparationId, OrderSubmissionResult submission) => FinishExecution(preparationId, PreparedOrderState.Executed, submission, "Execution reconciled.");
+
+    /// <summary>Stores a failed or unknown execution result.</summary>
+    public PreparedOrderResult FailExecution(Guid preparationId, OrderSubmissionResult? submission, string message) => FinishExecution(preparationId, PreparedOrderState.Failed, submission, message);
+
     private PreparedOrderResult Transition(Guid preparationId, string expectedHash, PreparedOrderState target)
     {
         while (_orders.TryGetValue(preparationId, out PreparedOrder? current))
         {
             current = ExpireIfNeeded(current);
             if (!CryptographicEquals(current.ImmutableHash, expectedHash)) return new(false, "APPROVAL_REJECTED", "The immutable order hash does not match.", current);
-            if (current.State == PreparedOrderState.Expired) return new(false, "ORDER_EXPIRED", "The prepared simulation has expired.", current);
-            if (current.State != PreparedOrderState.PendingApproval) return new(false, "APPROVAL_REJECTED", $"A {current.State} simulation cannot change approval state.", current);
+            if (current.State == PreparedOrderState.Expired) return new(false, "ORDER_EXPIRED", "The prepared plan has expired.", current);
+            if (current.State != PreparedOrderState.PendingApproval) return new(false, "APPROVAL_REJECTED", $"A {current.State} plan cannot change approval state.", current);
             DateTimeOffset now = timeProvider.GetUtcNow();
             PreparedOrder updated = target == PreparedOrderState.Approved
                 ? current with { State = target, ApprovedHash = current.ImmutableHash, ApprovedAtUtc = now }
@@ -72,10 +93,10 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
             if (_orders.TryUpdate(preparationId, updated, current))
             {
                 RaiseChanged(updated);
-                return new(true, "OK", target == PreparedOrderState.Approved ? "Simulation approved for review purposes; it is not executable." : "Simulation rejected.", updated);
+                return new(true, "OK", target == PreparedOrderState.Approved ? "Plan approved and eligible for the gated Demo execution flow." : "Plan rejected.", updated);
             }
         }
-        return Failure("VALIDATION_FAILED", "The prepared simulation was not found.");
+        return Failure("VALIDATION_FAILED", "The prepared plan was not found.");
     }
 
     private PreparedOrder ExpireIfNeeded(PreparedOrder order)
@@ -88,6 +109,21 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
             return expired;
         }
         return _orders.TryGetValue(order.PreparationId, out PreparedOrder? latest) ? latest : expired;
+    }
+
+    private PreparedOrderResult FinishExecution(Guid preparationId, PreparedOrderState state, OrderSubmissionResult? submission, string message)
+    {
+        while (_orders.TryGetValue(preparationId, out PreparedOrder? current))
+        {
+            if (current.State != PreparedOrderState.Executing) return new(false, "DUPLICATE_REQUEST", $"A {current.State} order cannot finish execution.", current);
+            PreparedOrder completed = current with { State = state, Submission = submission, ExecutionCompletedAtUtc = timeProvider.GetUtcNow() };
+            if (_orders.TryUpdate(preparationId, completed, current))
+            {
+                RaiseChanged(completed);
+                return new(state == PreparedOrderState.Executed, state == PreparedOrderState.Executed ? "OK" : "ORDER_STATE_UNKNOWN", message, completed);
+            }
+        }
+        return Failure("VALIDATION_FAILED", "The prepared order was not found.");
     }
 
     private static string ComputeHash(Guid preparationId, string requestId, string clientOrderId, NormalizedOrder order, TradingEnvironment environment, RiskSettingsSnapshot settings, DateTimeOffset created, DateTimeOffset expires, IReadOnlyList<string> warnings)
@@ -109,8 +145,9 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
     }
 
-    private static bool CryptographicEquals(string left, string right)
+    private static bool CryptographicEquals(string? left, string? right)
     {
+        if (left is null || right is null) return false;
         if (left.Length != right.Length) return false;
         try { return CryptographicOperations.FixedTimeEquals(Convert.FromHexString(left), Convert.FromHexString(right)); }
         catch (FormatException) { return false; }

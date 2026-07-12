@@ -3,26 +3,27 @@ using TradeRelay.Core.Providers;
 
 namespace TradeRelay.Tests;
 
-internal sealed class SuccessfulTestProviderFactory : IExchangeProviderFactory
+internal sealed class SuccessfulTestProviderFactory(bool readOnly = true, StubTradingProvider? trading = null) : IExchangeProviderFactory
 {
     public string ProviderName => "Bybit";
     public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new MarketData();
-    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials) => new Connection(environment);
+    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials) => new Connection(environment, readOnly, trading ?? new StubTradingProvider());
 
-    private sealed class Connection(TradingEnvironment environment) : IExchangeProviderConnection
+    private sealed class Connection(TradingEnvironment environment, bool readOnly, StubTradingProvider trading) : IExchangeProviderConnection
     {
-        public ITradingAccountProvider Account { get; } = new Account(environment);
+        public ITradingAccountProvider Account { get; } = new Account(environment, readOnly);
+        public IExchangeTradingProvider Trading { get; } = trading;
         public IExchangeStream Stream { get; } = new Stream();
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    private sealed class Account(TradingEnvironment environment) : ITradingAccountProvider
+    private sealed class Account(TradingEnvironment environment, bool readOnly) : ITradingAccountProvider
     {
         public Task<AccountSummary> GetAccountSummaryAsync(CancellationToken cancellationToken) => Task.FromResult(new AccountSummary(1000m, 900m, 10m, 5m, environment, DateTimeOffset.UtcNow));
         public Task<IReadOnlyList<WalletBalance>> GetBalancesAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<WalletBalance>>([new("USDT", 1000m, 1000m, 900m, 10m, 1000m)]);
         public Task<IReadOnlyList<PositionSnapshot>> GetPositionsAsync(string? symbol, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<PositionSnapshot>>([]);
         public Task<IReadOnlyList<OrderSnapshot>> GetOpenOrdersAsync(string? symbol, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<OrderSnapshot>>([]);
-        public Task<ApiCredentialInfo> GetCredentialInfoAsync(CancellationToken cancellationToken) => Task.FromResult(new ApiCredentialInfo(true, true, true, false, true, 30, DateTimeOffset.UtcNow.AddDays(30), false, environment, []));
+        public Task<ApiCredentialInfo> GetCredentialInfoAsync(CancellationToken cancellationToken) => Task.FromResult(new ApiCredentialInfo(readOnly, true, true, false, true, 30, DateTimeOffset.UtcNow.AddDays(30), false, environment, []));
     }
 
     private sealed class Stream : IExchangeStream

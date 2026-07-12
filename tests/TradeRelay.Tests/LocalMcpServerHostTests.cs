@@ -93,7 +93,7 @@ public sealed class LocalMcpServerHostTests
             context.TokenService.CurrentToken);
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
-        Assert.Equal("0.4.0", client.ServerInfo.Version);
+        Assert.Equal("0.5.0", client.ServerInfo.Version);
         Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
@@ -103,11 +103,11 @@ public sealed class LocalMcpServerHostTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        Assert.Contains("0.4.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("0.5.0", structuredContent, StringComparison.Ordinal);
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
-        Assert.Contains("ReadOnly", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("TradingDisabled", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
-        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals"];
+        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals", "execute_prepared_order", "cancel_order", "cancel_all_orders", "close_position", "set_trading_stop"];
         foreach (string name in expected) Assert.Contains(tools, tool => tool.Name == name);
     }
 
@@ -154,6 +154,41 @@ public sealed class LocalMcpServerHostTests
         CallToolResult preparedResult = await getPrepared.CallAsync(new Dictionary<string, object?> { ["preparationId"] = prepared.PreparationId.ToString() });
         Assert.NotEqual(true, preparedResult.IsError);
         Assert.Contains(prepared.ClientOrderId, preparedResult.StructuredContent?.GetRawText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TradingTools_RequireDesktopEnableAndExecuteDemoPlanOnce()
+    {
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory(readOnly: false));
+        Assert.True((await context.ConnectionManager.SaveAsync(TradingEnvironment.Demo, "write-key", "write-secret", false, default)).Success);
+        await context.Host.StartServerAsync();
+        await using McpClient client = await CreateClientAsync(context.Host.Snapshot.Url, context.TokenService.CurrentToken);
+        IList<McpClientTool> tools = await client.ListToolsAsync();
+
+        McpClientTool prepare = Assert.Single(tools, item => item.Name == "prepare_order");
+        await prepare.CallAsync(new Dictionary<string, object?> { ["clientRequestId"] = "m5-execution", ["symbol"] = "BTCUSDT", ["side"] = "Buy", ["orderType"] = "Limit", ["quantity"] = .1m, ["limitPrice"] = 100m, ["stopLoss"] = 90m, ["takeProfit"] = 120m });
+        PreparedOrder plan = Assert.Single(context.PreparedOrderStore.GetAll());
+        McpClientTool execute = Assert.Single(tools, item => item.Name == "execute_prepared_order");
+
+        CallToolResult disabled = await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() });
+        Assert.Contains("TRADING_DISABLED", disabled.StructuredContent?.GetRawText(), StringComparison.Ordinal);
+        Assert.True((await context.TradingControl.EnableAsync(true, true, default)).Allowed);
+
+        CallToolResult executed = await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() });
+        Assert.Contains("\"success\":true", executed.StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PreparedOrderState.Executed, context.PreparedOrderStore.Get(plan.PreparationId)?.State);
+        CallToolResult duplicate = await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() });
+        Assert.Contains("DUPLICATE_REQUEST", duplicate.StructuredContent?.GetRawText(), StringComparison.Ordinal);
+
+        CallToolResult cancelled = await Assert.Single(tools, item => item.Name == "cancel_order").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["exchangeOrderId"] = "exchange-1" });
+        Assert.Contains("\"success\":true", cancelled.StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        CallToolResult cancelAll = await Assert.Single(tools, item => item.Name == "cancel_all_orders").CallAsync(new Dictionary<string, object?> { ["confirm"] = true });
+        Assert.Contains("\"success\":true", cancelAll.StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        CallToolResult close = await Assert.Single(tools, item => item.Name == "close_position").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT" });
+        Assert.Contains("VALIDATION_FAILED", close.StructuredContent?.GetRawText(), StringComparison.Ordinal);
+        CallToolResult stop = await Assert.Single(tools, item => item.Name == "set_trading_stop").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["stopLoss"] = 90m });
+        Assert.Contains("VALIDATION_FAILED", stop.StructuredContent?.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("write-secret", string.Join(string.Empty, (await context.AuditLog.LoadRecentAsync(default)).Events.Select(item => item.ProviderResult)), StringComparison.Ordinal);
     }
 
     [Fact]

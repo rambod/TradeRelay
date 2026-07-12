@@ -59,6 +59,11 @@ internal static class Program
         builder.Services.AddSingleton<RiskEngine>();
         builder.Services.AddSingleton<PreparedOrderStore>();
         builder.Services.AddSingleton<OrderPreparationService>();
+        builder.Services.AddSingleton<AuditLogService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<AuditLogService>());
+        builder.Services.AddSingleton<TradingControlService>();
+        builder.Services.AddSingleton<TradingGate>();
+        builder.Services.AddSingleton<OrderExecutionService>();
         builder.Services.AddSingleton<LocalMcpTokenService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<LocalMcpTokenService>());
         builder.Services.AddSingleton<ExchangeConnectionManager>();
@@ -71,6 +76,7 @@ internal static class Program
         builder.Services.AddSingleton<App>();
         builder.Services.AddSingleton<RiskViewModel>();
         builder.Services.AddSingleton<ApprovalsViewModel>();
+        builder.Services.AddSingleton<ActivityViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));

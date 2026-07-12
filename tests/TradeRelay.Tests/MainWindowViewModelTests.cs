@@ -21,6 +21,9 @@ public sealed class MainWindowViewModelTests
             context.PreparedOrderStore,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            context.TradingControl,
+            context.AuditLog,
             context.Metadata,
             clipboard,
             new ImmediateUiDispatcher(),
@@ -61,6 +64,9 @@ public sealed class MainWindowViewModelTests
             context.PreparedOrderStore,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            context.TradingControl,
+            context.AuditLog,
             context.Metadata,
             new RecordingClipboardService(),
             new ImmediateUiDispatcher(),
@@ -98,6 +104,9 @@ public sealed class MainWindowViewModelTests
             context.PreparedOrderStore,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            context.TradingControl,
+            context.AuditLog,
             context.Metadata,
             new RecordingClipboardService(),
             new ImmediateUiDispatcher(),
@@ -120,6 +129,55 @@ public sealed class MainWindowViewModelTests
         Assert.Equal("None", viewModel.SavedKeyPreview);
         Assert.Contains("deleted", viewModel.CredentialActionStatus, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task DemoTradingCommands_RequireAcknowledgementAndServerStopDisablesSession()
+    {
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory(readOnly: false));
+        Assert.True((await context.ConnectionManager.SaveAsync(TradingEnvironment.Demo, "write-key", "write-secret", false, default)).Success);
+        using MainWindowViewModel viewModel = Create(context);
+        await viewModel.StartServerCommand.ExecuteAsync(null);
+
+        await viewModel.EnableDemoTradingCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsDemoTradingEnabled);
+        viewModel.TradingAcknowledged = true;
+        await viewModel.EnableDemoTradingCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsDemoTradingEnabled);
+        Assert.Equal("TradingEnabled", viewModel.AccessStatus);
+
+        await viewModel.StopServerCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsDemoTradingEnabled);
+    }
+
+    [Fact]
+    public async Task ActivityViewModel_FiltersLiveAuditEvents()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        using var viewModel = new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher());
+        await context.AuditLog.TryWriteAsync(context.AuditLog.Create("cancel_order", "cancel_reconciled", "OK", TradingEnvironment.Demo, "correlation", "BTCUSDT"), default);
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsEmpty);
+        viewModel.SymbolFilter = "ETH";
+        Assert.True(viewModel.IsEmpty);
+        viewModel.ClearFiltersCommand.Execute(null);
+        Assert.False(viewModel.IsEmpty);
+    }
+
+    private static MainWindowViewModel Create(TestServerContext context) => new(
+        context.Settings,
+        context.Host,
+        context.TokenService,
+        context.ConnectionManager,
+        context.PreparedOrderStore,
+        new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
+        new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+        new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+        context.TradingControl,
+        context.AuditLog,
+        context.Metadata,
+        new RecordingClipboardService(),
+        new ImmediateUiDispatcher(),
+        TimeProvider.System);
 
     private sealed class RecordingClipboardService : IClipboardService
     {

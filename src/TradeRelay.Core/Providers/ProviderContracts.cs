@@ -30,6 +30,23 @@ public interface ITradingAccountProvider
     Task<ApiCredentialInfo> GetCredentialInfoAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>Provides normalized exchange write operations.</summary>
+public interface IExchangeTradingProvider
+{
+    /// <summary>Places an already validated order.</summary>
+    Task<OrderSubmissionResult> PlaceOrderAsync(ExchangeOrderRequest order, CancellationToken cancellationToken);
+    /// <summary>Gets an order by exchange ID or client order ID.</summary>
+    Task<OrderSubmissionResult?> GetOrderAsync(string symbol, string? exchangeOrderId, string? clientOrderId, CancellationToken cancellationToken);
+    /// <summary>Cancels one explicit exchange order.</summary>
+    Task<OperationResult> CancelOrderAsync(string symbol, string exchangeOrderId, CancellationToken cancellationToken);
+    /// <summary>Cancels active USDT-linear orders, optionally for one symbol.</summary>
+    Task<OperationResult> CancelAllOrdersAsync(string? symbol, CancellationToken cancellationToken);
+    /// <summary>Submits a reduce-only position close.</summary>
+    Task<OrderSubmissionResult> ClosePositionAsync(ClosePositionRequest request, CancellationToken cancellationToken);
+    /// <summary>Sets full-position protection.</summary>
+    Task<OperationResult> SetTradingStopAsync(TradingStopRequest request, CancellationToken cancellationToken);
+}
+
 /// <summary>Provides private exchange-stream state and normalized updates.</summary>
 public interface IExchangeStream
 {
@@ -63,6 +80,8 @@ public interface IExchangeProviderConnection : IAsyncDisposable
 {
     /// <summary>Gets authenticated account data.</summary>
     ITradingAccountProvider Account { get; }
+    /// <summary>Gets exchange write operations.</summary>
+    IExchangeTradingProvider Trading { get; }
     /// <summary>Gets the private stream.</summary>
     IExchangeStream Stream { get; }
 }

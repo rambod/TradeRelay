@@ -113,8 +113,8 @@ public sealed partial class RiskEngine
         decimal? ratio = estimatedRisk is > 0m && reward is not null ? reward.Value / estimatedRisk.Value : null;
 
         if (!credentialInfo.HasTradingPermission) warnings.Add("The loaded API key cannot trade. This plan remains a read-only simulation.");
-        if (account.Environment == TradingEnvironment.Live) warnings.Add("Live Simulation: no exchange write can occur in this milestone.");
-        else warnings.Add("Demo simulation only: no exchange write can occur in this milestone.");
+        if (account.Environment == TradingEnvironment.Live) warnings.Add("Live Simulation: Live exchange writes are unavailable in this milestone.");
+        else warnings.Add("Demo plan: execution still requires explicit session enablement and the centralized trading gate.");
 
         var normalized = new NormalizedOrder(symbol, request.Side, request.OrderType, request.Quantity, quantity, request.LimitPrice, limitPrice, entryPrice, request.StopLoss, stopLoss, request.TakeProfit, takeProfit, leverage, new RiskEstimate(notional, estimatedRisk, reward, ratio, accountRisk), NormalizeNote(request.UserNote));
         return new(errors.Count == 0, normalized, errors, warnings);

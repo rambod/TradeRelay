@@ -47,7 +47,7 @@ public sealed class RiskAndApprovalsViewModelTests
             viewModel.ApproveCommand.Execute(null);
             Assert.Equal(PreparedOrderState.Approved.ToString(), viewModel.SelectedState);
             Assert.False(viewModel.ApproveCommand.CanExecute(null));
-            Assert.Contains("not executable", viewModel.ActionMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("gated Demo execution", viewModel.ActionMessage, StringComparison.OrdinalIgnoreCase);
         }
         finally { viewModel.Dispose(); }
     }

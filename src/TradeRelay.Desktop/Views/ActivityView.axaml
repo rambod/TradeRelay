@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:viewModels="using:TradeRelay.Desktop.ViewModels" xmlns:core="using:TradeRelay.Core.Models" x:Class="TradeRelay.Desktop.Views.ActivityView" x:DataType="viewModels:ActivityViewModel">
+  <Grid Margin="32" RowDefinitions="Auto,Auto,*" RowSpacing="16">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Activity"/><TextBlock Classes="muted" Text="Execution-focused history backed by append-only UTC JSONL audit files."/></StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="quiet" Command="{Binding RefreshCommand}" Content="Refresh"/><Button Classes="quiet" Command="{Binding OpenAuditFolderCommand}" Content="Open audit folder"/></StackPanel>
+    </Grid>
+    <WrapPanel Grid.Row="1">
+      <ComboBox Width="120" Margin="0,0,8,8" ItemsSource="{Binding Environments}" SelectedItem="{Binding EnvironmentFilter}"/>
+      <ComboBox Width="150" Margin="0,0,8,8" ItemsSource="{Binding Results}" SelectedItem="{Binding ResultFilter}"/>
+      <TextBox Width="190" Margin="0,0,8,8" Text="{Binding ActionFilter}" PlaceholderText="Action or tool"/>
+      <TextBox Width="150" Margin="0,0,8,8" Text="{Binding SymbolFilter}" PlaceholderText="Symbol"/>
+      <DatePicker Width="170" Margin="0,0,8,8" SelectedDate="{Binding DateFilter}"/>
+      <Button Classes="quiet" Margin="0,0,0,8" Command="{Binding ClearFiltersCommand}" Content="Clear filters"/>
+    </WrapPanel>
+    <Grid Grid.Row="2" ColumnDefinitions="2*,3*" ColumnSpacing="14">
+      <Border Classes="panel" Padding="10">
+        <ListBox ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}">
+          <ListBox.ItemTemplate><DataTemplate x:DataType="core:AuditEvent"><Grid Margin="4,7" ColumnDefinitions="90,*,Auto" ColumnSpacing="8"><TextBlock Classes="muted" Text="{Binding TimestampUtc, StringFormat='{}{0:MM-dd HH:mm:ss}'}"/><StackPanel Grid.Column="1"><TextBlock Classes="value" Text="{Binding Action}"/><TextBlock Classes="muted" Text="{Binding Symbol}"/></StackPanel><StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Classes="statusLabel" Text="{Binding Result}"/><TextBlock Classes="muted" Text="{Binding Environment}"/></StackPanel></Grid></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+      <Border Grid.Column="1" Classes="panel" Padding="20">
+        <Grid><StackPanel IsVisible="{Binding HasSelection}" Spacing="14"><TextBlock Classes="sectionTitle" Text="{Binding SelectedTitle}"/><TextBlock Classes="mono" Text="{Binding SelectedIds}" TextWrapping="Wrap"/><Separator/><TextBlock Text="{Binding SelectedDetails}" TextWrapping="Wrap"/><TextBlock Classes="warningLabel" Text="{Binding Warning}" TextWrapping="Wrap"/></StackPanel><StackPanel IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="430" Spacing="8"><TextBlock FontSize="18" FontWeight="SemiBold" Text="No matching activity" HorizontalAlignment="Center"/><TextBlock Classes="muted" Text="Preparation, approval, trading-gate, provider, and reconciliation events will appear here." TextAlignment="Center" TextWrapping="Wrap"/></StackPanel></Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

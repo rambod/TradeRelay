@@ -32,6 +32,33 @@ internal sealed class OrderPreparationService(
         return preparedOrderStore.Add(request.ClientRequestId, validation, environment, RiskSettingsSnapshot.Create(settings.Risk, environment));
     }
 
+    public async Task<OrderValidationResult> RevalidateAsync(PreparedOrder prepared, CancellationToken cancellationToken)
+    {
+        RiskSettingsSnapshot snapshot = prepared.RiskSettings;
+        var riskSettings = new RiskSettings
+        {
+            AllowedSymbols = new HashSet<string>(snapshot.AllowedSymbols, StringComparer.Ordinal),
+            MaxRiskPerTradePercent = snapshot.MaxRiskPerTradePercent,
+            MaxOrderNotionalUsd = snapshot.MaxOrderNotionalUsd,
+            MaxOpenPositions = snapshot.MaxOpenPositions,
+            MaxLeverage = snapshot.MaxLeverage,
+            RequireStopLoss = snapshot.RequireStopLoss,
+            RequireManualApprovalForDemo = snapshot.RequireManualApproval,
+            RequireManualApprovalForLive = true,
+            PreparedOrderExpirySeconds = snapshot.PreparedOrderExpirySeconds
+        };
+        NormalizedOrder order = prepared.Order;
+        var request = new PrepareOrderRequest(prepared.ClientRequestId, order.Symbol, order.Side, order.OrderType, order.RequestedQuantity, order.RequestedLimitPrice, order.RequestedStopLoss, order.RequestedTakeProfit, order.Leverage, order.UserNote);
+        ITradingAccountProvider accountProvider = connectionManager.Account ?? throw new ProviderException("CREDENTIALS_MISSING", "The authenticated account is unavailable.");
+        Task<TickerSnapshot> tickerTask = connectionManager.MarketData.GetTickerAsync(order.Symbol, cancellationToken);
+        Task<InstrumentInfo> instrumentTask = connectionManager.MarketData.GetInstrumentInfoAsync(order.Symbol, cancellationToken);
+        Task<AccountSummary> accountTask = accountProvider.GetAccountSummaryAsync(cancellationToken);
+        Task<IReadOnlyList<PositionSnapshot>> positionsTask = accountProvider.GetPositionsAsync(null, cancellationToken);
+        await Task.WhenAll(tickerTask, instrumentTask, accountTask, positionsTask).ConfigureAwait(false);
+        ApiCredentialInfo credential = connectionManager.Snapshot.CredentialInfo ?? throw new ProviderException("CREDENTIALS_MISSING", "Credential permission information is unavailable.");
+        return riskEngine.ValidateOrder(request, riskSettings, await instrumentTask.ConfigureAwait(false), await tickerTask.ConfigureAwait(false), await accountTask.ConfigureAwait(false), (await positionsTask.ConfigureAwait(false)).Count, credential);
+    }
+
     public async Task<PositionSizeResult> CalculatePositionSizeAsync(string symbol, decimal entryPrice, decimal stopLoss, decimal accountRiskPercent, CancellationToken cancellationToken)
     {
         ITradingAccountProvider accountProvider = connectionManager.Account ?? throw new ProviderException("CREDENTIALS_MISSING", "Load and validate exchange credentials before calculating position size.");

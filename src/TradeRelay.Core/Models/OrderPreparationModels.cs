@@ -85,7 +85,7 @@ public sealed record PositionSizeResult(
     IReadOnlyList<string> Errors,
     IReadOnlyList<string> Warnings);
 
-/// <summary>Represents one immutable, non-executable prepared simulation.</summary>
+/// <summary>Represents one immutable prepared plan and its execution lifecycle.</summary>
 public sealed record PreparedOrder(
     Guid PreparationId,
     string ClientRequestId,
@@ -100,7 +100,10 @@ public sealed record PreparedOrder(
     string? ApprovedHash,
     DateTimeOffset? ApprovedAtUtc,
     DateTimeOffset? RejectedAtUtc,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    DateTimeOffset? ExecutionStartedAtUtc = null,
+    DateTimeOffset? ExecutionCompletedAtUtc = null,
+    OrderSubmissionResult? Submission = null);
 
 /// <summary>Represents an atomic prepared-order store operation.</summary>
 public sealed record PreparedOrderResult(bool Success, string Code, string Message, PreparedOrder? Order);

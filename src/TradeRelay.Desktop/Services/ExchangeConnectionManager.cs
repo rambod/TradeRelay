@@ -23,6 +23,8 @@ internal sealed class ExchangeConnectionManager(
     public ProviderConnectionSnapshot Snapshot => Volatile.Read(ref _snapshot);
     public IMarketDataProvider MarketData => _marketData;
     public ITradingAccountProvider? Account => Volatile.Read(ref _connection)?.Account;
+    public IExchangeTradingProvider? Trading => Volatile.Read(ref _connection)?.Trading;
+    public IExchangeStream? Stream => Volatile.Read(ref _connection)?.Stream;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

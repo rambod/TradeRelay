@@ -12,17 +12,19 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
     private readonly PreparedOrderStore _store;
     private readonly IUiDispatcher _dispatcher;
     private readonly TimeProvider _timeProvider;
+    private readonly AuditLogService? _audit;
     private readonly CancellationTokenSource _timerCancellation = new();
     private int _disposed;
 
     [ObservableProperty] private PreparedOrder? _selectedOrder;
-    [ObservableProperty] private string _actionMessage = "Prepared and approved items are local simulations only.";
+    [ObservableProperty] private string _actionMessage = "Approval records intent; execution remains MCP-only.";
 
-    public ApprovalsViewModel(PreparedOrderStore store, IUiDispatcher dispatcher, TimeProvider timeProvider)
+    public ApprovalsViewModel(PreparedOrderStore store, IUiDispatcher dispatcher, TimeProvider timeProvider, AuditLogService? audit = null)
     {
         _store = store;
         _dispatcher = dispatcher;
         _timeProvider = timeProvider;
+        _audit = audit;
         _store.Changed += OnStoreChanged;
         Refresh();
         _ = RefreshTimerAsync();
@@ -31,7 +33,7 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
     public ObservableCollection<PreparedOrder> Orders { get; } = [];
     public bool IsEmpty => Orders.Count == 0;
     public bool HasSelection => SelectedOrder is not null;
-    public string SelectedTitle => SelectedOrder is null ? "Select a simulation" : $"{SelectedOrder.Order.Side} {SelectedOrder.Order.Symbol}";
+    public string SelectedTitle => SelectedOrder is null ? "Select a plan" : $"{SelectedOrder.Order.Side} {SelectedOrder.Order.Symbol}";
     public string SelectedState => SelectedOrder?.State.ToString() ?? "No selection";
     public string SelectedEnvironment => SelectedOrder is null ? "—" : $"{SelectedOrder.Environment} Simulation";
     public string SelectedExpiry => SelectedOrder is null ? "—" : SelectedOrder.State == PreparedOrderState.Expired ? "Expired" : $"{Math.Max(0, (int)Math.Ceiling((SelectedOrder.ExpiresAtUtc - _timeProvider.GetUtcNow()).TotalSeconds))} seconds";
@@ -41,6 +43,7 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
     public string SelectedRisk => SelectedOrder is null ? "—" : $"Notional ${SelectedOrder.Order.Risk.EstimatedNotionalUsd} · Risk {FormatNullable(SelectedOrder.Order.Risk.EstimatedRiskUsd, "$", "Unknown")} · Account {FormatNullable(SelectedOrder.Order.Risk.AccountRiskPercent, string.Empty, "Unknown", "%")}";
     public string SelectedIds => SelectedOrder is null ? "—" : $"Preparation {SelectedOrder.PreparationId:N}{Environment.NewLine}Client {SelectedOrder.ClientOrderId}{Environment.NewLine}Hash {SelectedOrder.ImmutableHash[..16]}…";
     public string SelectedWarnings => SelectedOrder is null || SelectedOrder.Warnings.Count == 0 ? "None" : string.Join(Environment.NewLine, SelectedOrder.Warnings.Select(warning => $"• {warning}"));
+    public string SelectedExecution => SelectedOrder?.Submission is null ? "Not submitted" : $"{SelectedOrder.Submission.Status} · Filled {SelectedOrder.Submission.FilledQuantity}/{SelectedOrder.Submission.OriginalQuantity} · Remaining {SelectedOrder.Submission.RemainingQuantity} · Average {SelectedOrder.Submission.AverageFillPrice?.ToString() ?? "—"}{Environment.NewLine}{SelectedOrder.Submission.Message}";
 
     partial void OnSelectedOrderChanged(PreparedOrder? value)
     {
@@ -56,6 +59,7 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
         PreparedOrderResult result = _store.Approve(SelectedOrder.PreparationId, SelectedOrder.ImmutableHash);
         ActionMessage = result.Message;
         SelectedOrder = result.Order;
+        AuditDecision(result.Order, "approval", result.Code);
         Refresh();
     }
 
@@ -66,6 +70,7 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
         PreparedOrderResult result = _store.Reject(SelectedOrder.PreparationId, SelectedOrder.ImmutableHash);
         ActionMessage = result.Message;
         SelectedOrder = result.Order;
+        AuditDecision(result.Order, "rejection", result.Code);
         Refresh();
     }
 
@@ -114,6 +119,13 @@ internal sealed partial class ApprovalsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedEnvironment)); OnPropertyChanged(nameof(SelectedExpiry)); OnPropertyChanged(nameof(SelectedRequested));
         OnPropertyChanged(nameof(SelectedNormalized)); OnPropertyChanged(nameof(SelectedProtection)); OnPropertyChanged(nameof(SelectedRisk));
         OnPropertyChanged(nameof(SelectedIds)); OnPropertyChanged(nameof(SelectedWarnings));
+        OnPropertyChanged(nameof(SelectedExecution));
+    }
+
+    private void AuditDecision(PreparedOrder? order, string action, string result)
+    {
+        if (_audit is null || order is null) return;
+        _ = _audit.TryWriteAsync(_audit.Create("desktop", action, result, order.Environment, Guid.NewGuid().ToString("N"), order.Order.Symbol, order.PreparationId, order.ClientOrderId, approvalState: order.State.ToString()), CancellationToken.None);
     }
 
     private static string FormatNullable(decimal? value, string prefix, string fallback, string suffix = "") => value is null ? fallback : $"{prefix}{value:G29}{suffix}";

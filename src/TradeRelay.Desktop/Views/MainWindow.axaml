@@ -44,14 +44,14 @@
             Grid.Column="1"
             Padding="12,7"
             VerticalAlignment="Center"
-            Background="#17382D"
-            BorderBrush="#2C8065"
+            Background="#203649"
+            BorderBrush="#35607B"
             BorderThickness="1"
             CornerRadius="8">
           <TextBlock
               FontWeight="SemiBold"
-              Foreground="#8BE0BD"
-              Text="Read-only session" />
+              Foreground="#B9D8EF"
+              Text="{Binding HeaderSafetyState}" />
         </Border>
       </Grid>
     </Border>
@@ -62,6 +62,7 @@
         <Button Classes="quiet" Command="{Binding ShowCredentialsCommand}" Content="Credentials" />
         <Button Classes="quiet" Command="{Binding ShowRiskCommand}" Content="Risk" />
         <Button Classes="quiet" Command="{Binding ShowApprovalsCommand}" Content="Approvals" />
+        <Button Classes="quiet" Command="{Binding ShowActivityCommand}" Content="Activity" />
       </StackPanel>
     </Border>
 
@@ -76,7 +77,7 @@
             <TextBlock
                 Classes="muted"
                 MaxWidth="420"
-                Text="Trading remains unavailable. Market and account access are read-only."
+                Text="Exchange writes require an explicitly enabled Bybit Demo session. Live writes remain unavailable."
                 TextWrapping="Wrap" />
           </StackPanel>
 
@@ -116,6 +117,18 @@
                 <TextBlock Classes="muted" Text="Pending approvals" />
                 <TextBlock Grid.Column="1" Classes="value" Text="{Binding PendingApprovalCount}" />
               </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="panel" Padding="18">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="{Binding DemoTradingState}"/><TextBlock Classes="muted" Text="{Binding DemoTradingDetail}" TextWrapping="Wrap"/></StackPanel><Border Grid.Column="1" Classes="infoBadge"><TextBlock Classes="statusLabel" Text="DEMO ONLY"/></Border></Grid>
+              <CheckBox IsVisible="{Binding IsDemoTradingDisabled}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this sends write requests to my Bybit Demo account."/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="primary" IsVisible="{Binding IsDemoTradingDisabled}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
+                <Button Classes="danger" IsVisible="{Binding IsDemoTradingEnabled}" Command="{Binding DisableDemoTradingCommand}" Content="Disable new trading actions"/>
+              </StackPanel>
+              <TextBlock Classes="muted" Text="Disabling blocks new writes immediately. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
 
@@ -268,7 +281,7 @@
             </StackPanel>
           </Border>
           <Border Padding="18" Background="#351A1D" BorderBrush="#7A343B" BorderThickness="1" CornerRadius="10">
-            <TextBlock Foreground="#F2A8AE" Text="TradeRelay rejects every API key with withdrawal permission. Read/write keys remain read-only because this milestone exposes no exchange write operations." TextWrapping="Wrap" />
+            <TextBlock Foreground="#F2A8AE" Text="TradeRelay rejects every API key with withdrawal permission. Only a validated Demo read/write key can enable session trading; Live writes remain blocked." TextWrapping="Wrap" />
           </Border>
         </StackPanel>
       </Grid>
@@ -279,6 +292,9 @@
     </Grid>
     <Grid Grid.Row="2" IsVisible="{Binding IsApprovalsSelected}">
       <localViews:ApprovalsView DataContext="{Binding Approvals}" />
+    </Grid>
+    <Grid Grid.Row="2" IsVisible="{Binding IsActivitySelected}">
+      <localViews:ActivityView DataContext="{Binding Activity}" />
     </Grid>
   </Grid>
 </Window>

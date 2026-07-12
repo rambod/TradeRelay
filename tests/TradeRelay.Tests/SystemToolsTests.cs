@@ -19,6 +19,7 @@ public sealed class SystemToolsTests
             context.Settings,
             context.ConnectionManager,
             context.PreparedOrderStore,
+            context.TradingControl,
             context.Metadata,
             timeProvider);
 
@@ -30,10 +31,10 @@ public sealed class SystemToolsTests
         Assert.True(result.Success);
         Assert.Equal("OK", result.Code);
         Assert.NotNull(result.Data);
-        Assert.Equal("0.4.0", result.Data.AppVersion);
+        Assert.Equal("0.5.0", result.Data.AppVersion);
         Assert.Equal(McpServerState.Stopped, result.Data.ServerState);
         Assert.Equal(TradingEnvironment.Demo, result.Data.Environment);
-        Assert.Equal(TradingAccessMode.ReadOnly, result.Data.AccessMode);
+        Assert.Equal(TradingAccessMode.TradingDisabled, result.Data.AccessMode);
         Assert.False(result.Data.LiveTradingEnabled);
         Assert.Equal(ServiceHealthState.NotConfigured, result.Data.ProviderRestHealth);
         Assert.Equal(ServiceHealthState.NotConfigured, result.Data.ProviderStreamHealth);

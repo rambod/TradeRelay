@@ -16,4 +16,5 @@ internal sealed class ApplicationDataPaths
     public string Root { get; }
     public string SettingsFile => Path.Combine(Root, "settings.json");
     public string ProtectedDataDirectory => Path.Combine(Root, "protected");
+    public string AuditDirectory => Path.Combine(Root, "audit");
 }

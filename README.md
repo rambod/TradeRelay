@@ -3,11 +3,11 @@
 TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
 
 > [!WARNING]
-> TradeRelay is under active development. Milestone 4 provides non-executable risk validation and simulated order preparation, but no exchange-write implementation. It must not be used for live trading.
+> TradeRelay is under active development. Milestone 5 can send explicitly enabled write requests to Bybit Demo only. Live exchange writes remain unavailable.
 
 ## Current status
 
-Milestone 4 provides:
+Milestone 5 provides:
 
 - A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
 - Dashboard and credential control panels
@@ -20,13 +20,17 @@ Milestone 4 provides:
 - Instrument-aware position sizing, order normalization, and risk validation
 - Expiring immutable prepared simulations with idempotent request IDs and SHA-256 hashes
 - Desktop-only approval and rejection with Demo auto-approval policy
-- Risk and Approvals control-panel views with explicit non-executable status
+- Risk, Approvals, and execution-focused Activity views
 - MCP tools for risk settings, position sizing, validation, preparation, and approval inspection
+- Session-only, desktop-enabled Bybit Demo trading with centralized safety gates
+- Exactly-once prepared-order submission, WebSocket/REST reconciliation, partial-fill reporting, and ambiguous-state protection
+- Demo order cancellation, explicit cancel-all, reduce-only position closing, and full-position trading stops
+- Redacted, append-only daily JSONL activity auditing
 - Unit, Kestrel integration, security, concurrency, and optional Bybit Demo integration coverage
 
-Order execution, cancellation, trading enablement, persistent audit logging, and all exchange write behavior are intentionally not implemented yet. Prepared and Approved mean locally reviewed simulation—not executable.
+Live execution, persistent trading enablement, databases, and automatic exchange cleanup are intentionally not implemented. Stopping or disabling TradeRelay never cancels orders, closes positions, or removes protection.
 
-Current version: `0.4.0`
+Current version: `0.5.0`
 
 ## Credential safety
 
@@ -36,6 +40,8 @@ Current version: `0.4.0`
 - When enabled, TradeRelay uses the operating system's protected credential store and never writes credentials to `settings.json`.
 
 Optional Bybit Demo integration tests use `TRADERELAY_BYBIT_DEMO_API_KEY` and `TRADERELAY_BYBIT_DEMO_API_SECRET`. They do nothing when those variables are absent and never target Live.
+
+Write-capable Demo integration tests additionally require an explicit `TRADERELAY_RUN_DEMO_TRADING_TESTS=1` opt-in and never run in normal test execution.
 
 ## Release roadmap
 

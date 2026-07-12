@@ -4,6 +4,8 @@ namespace TradeRelay.Desktop.Mcp;
 
 internal static class ToolResponse
 {
+    public static string NewCorrelationId() => Guid.NewGuid().ToString("N");
+
     public static ToolResult<T> Success<T>(T data, string message, TradingEnvironment environment, TimeProvider timeProvider)
     {
         DateTimeOffset timestamp = timeProvider.GetUtcNow();
@@ -21,6 +23,9 @@ internal static class ToolResponse
         DateTimeOffset timestamp = timeProvider.GetUtcNow();
         return new ToolResult<T>(success, code, message, data, Guid.NewGuid().ToString("N"), environment, timestamp);
     }
+
+    public static ToolResult<T> Correlated<T>(bool success, string code, string message, T? data, string correlationId, TradingEnvironment environment, TimeProvider timeProvider) =>
+        new(success, code, message, data, correlationId, environment, timeProvider.GetUtcNow());
 
     public static async Task<ToolResult<T>> RunAsync<T>(Func<CancellationToken, Task<T>> action, string message, TradingEnvironment environment, TimeProvider timeProvider, CancellationToken cancellationToken)
     {

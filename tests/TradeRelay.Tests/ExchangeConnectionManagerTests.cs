@@ -70,6 +70,7 @@ public sealed class ExchangeConnectionManagerTests
     {
         public bool Disposed { get; private set; }
         public ITradingAccountProvider Account { get; } = new FakeAccount(info);
+        public IExchangeTradingProvider Trading { get; } = new StubTradingProvider();
         public IExchangeStream Stream { get; } = new FakeStream();
         public ValueTask DisposeAsync() { Disposed = true; return ValueTask.CompletedTask; }
     }

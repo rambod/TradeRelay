@@ -26,6 +26,10 @@ internal sealed class TestServerContext : IAsyncDisposable
     public OrderPreparationService OrderPreparationService { get; }
     public ApplicationSettingsStore SettingsStore { get; }
     public RiskEngine RiskEngine { get; }
+    public AuditLogService AuditLog { get; }
+    public TradingControlService TradingControl { get; }
+    public TradingGate TradingGate { get; }
+    public OrderExecutionService OrderExecutionService { get; }
     private string DataDirectory { get; set; } = string.Empty;
 
     public static TestServerContext Create(
@@ -55,6 +59,7 @@ internal sealed class TestServerContext : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await Host.StopServerAsync();
+        TradingControl.Dispose();
         if (Directory.Exists(DataDirectory)) Directory.Delete(DataDirectory, true);
     }
 
@@ -72,7 +77,8 @@ internal sealed class TestServerContext : IAsyncDisposable
         TimeProvider = timeProvider;
         var session = new SessionCredentialStore();
         DataDirectory = Path.Combine(Path.GetTempPath(), "TradeRelay.Tests", Guid.NewGuid().ToString("N"));
-        SettingsStore = new ApplicationSettingsStore(new ApplicationDataPaths(DataDirectory));
+        var paths = new ApplicationDataPaths(DataDirectory);
+        SettingsStore = new ApplicationSettingsStore(paths);
         ConnectionManager = new ExchangeConnectionManager(
             settings,
             SettingsStore,
@@ -82,6 +88,10 @@ internal sealed class TestServerContext : IAsyncDisposable
         RiskEngine = new RiskEngine();
         PreparedOrderStore = new PreparedOrderStore(timeProvider);
         OrderPreparationService = new OrderPreparationService(ConnectionManager, RiskEngine, PreparedOrderStore, settings);
+        AuditLog = new AuditLogService(paths, timeProvider);
+        TradingControl = new TradingControlService(ConnectionManager, RiskEngine, settings, timeProvider);
+        TradingGate = new TradingGate(TradingControl, ConnectionManager, AuditLog, settings);
+        OrderExecutionService = new OrderExecutionService(ConnectionManager, TradingGate, OrderPreparationService, PreparedOrderStore, AuditLog, timeProvider);
         Host = new LocalMcpServerHost(
             settings,
             tokenService,
@@ -90,6 +100,9 @@ internal sealed class TestServerContext : IAsyncDisposable
             ConnectionManager,
             OrderPreparationService,
             PreparedOrderStore,
+            OrderExecutionService,
+            TradingControl,
+            AuditLog,
             logger);
     }
 

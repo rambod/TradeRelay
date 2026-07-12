@@ -23,6 +23,9 @@ internal sealed class LocalMcpServerHost(
     ExchangeConnectionManager connectionManager,
     OrderPreparationService orderPreparationService,
     PreparedOrderStore preparedOrderStore,
+    OrderExecutionService orderExecutionService,
+    TradingControlService tradingControl,
+    AuditLogService auditLog,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -78,6 +81,7 @@ internal sealed class LocalMcpServerHost(
                 logger.LogInformation(
                     "Local MCP server started on loopback port {Port}",
                     endpoint.Port);
+                await auditLog.TryWriteAsync(auditLog.Create("system", "mcp_started", "OK", settings.Bybit.Environment, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -121,6 +125,7 @@ internal sealed class LocalMcpServerHost(
             }
 
             SetSnapshot(Snapshot with { State = McpServerState.Stopping });
+            tradingControl.Disable("The local MCP server stopped; Demo trading was disabled.");
 
             WebApplication? application = _application;
             _application = null;
@@ -149,6 +154,7 @@ internal sealed class LocalMcpServerHost(
             });
 
             logger.LogInformation("Local MCP server stopped");
+            await auditLog.TryWriteAsync(auditLog.Create("system", "mcp_stopped", "OK", settings.Bybit.Environment, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -195,6 +201,9 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(connectionManager);
         builder.Services.AddSingleton(orderPreparationService);
         builder.Services.AddSingleton(preparedOrderStore);
+        builder.Services.AddSingleton(orderExecutionService);
+        builder.Services.AddSingleton(tradingControl);
+        builder.Services.AddSingleton(auditLog);
 
         builder.Services
             .AddMcpServer(mcp =>
@@ -211,7 +220,8 @@ internal sealed class LocalMcpServerHost(
             .WithTools<ConnectionTools>()
             .WithTools<MarketTools>()
             .WithTools<AccountTools>()
-            .WithTools<RiskTools>();
+            .WithTools<RiskTools>()
+            .WithTools<TradingTools>();
 
         WebApplication application = builder.Build();
         application.UseHostFiltering();

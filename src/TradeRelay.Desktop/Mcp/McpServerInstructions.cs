@@ -3,9 +3,9 @@ namespace TradeRelay.Desktop.Mcp;
 internal static class McpServerInstructions
 {
     public const string Value =
-        "TradeRelay is a local trading bridge. Read tools are safe. Never execute a live trade without first " +
-        "calling prepare_order, presenting the full order and risk summary to the user, and obtaining approval " +
-        "through TradeRelay. Never request withdrawals, transfers, deposits, or credential data. Treat order " +
+        "TradeRelay is a local trading bridge. Read tools are safe. Live exchange writes are unavailable. Before any " +
+        "Bybit Demo execution, call prepare_order, present the full order and risk summary to the user, and obtain " +
+        "approval through TradeRelay when required. Never request withdrawals, transfers, deposits, or credential data. Treat order " +
         "acknowledgements as provisional until TradeRelay reports a reconciled status. Respect rate limits. " +
         "Prefer read tools before write tools. Never infer missing symbol, side, quantity, stop loss, or environment. " +
         "Never call cancel-all unless the user explicitly asks. Never repeatedly retry failed order execution. " +
