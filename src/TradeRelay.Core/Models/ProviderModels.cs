@@ -13,7 +13,7 @@ public sealed record TickerSnapshot(string Symbol, decimal LastPrice, decimal? B
 public sealed record Candle(string Symbol, CandleInterval Interval, DateTimeOffset OpenTimeUtc, DateTimeOffset CloseTimeUtc, decimal Open, decimal High, decimal Low, decimal Close, decimal Volume);
 
 /// <summary>Represents normalized instrument metadata.</summary>
-public sealed record InstrumentInfo(string Symbol, string Status, decimal TickSize, decimal QuantityStep, decimal MinimumQuantity, decimal MaximumQuantity, decimal? MinimumNotional, decimal? MaximumLeverage, string ContractType);
+public sealed record InstrumentInfo(string Symbol, string Status, decimal TickSize, decimal QuantityStep, decimal MinimumQuantity, decimal MaximumQuantity, decimal? MaximumMarketQuantity, decimal? MinimumNotional, decimal? MaximumLeverage, string ContractType);
 
 /// <summary>Represents one order-book level.</summary>
 public sealed record OrderBookLevel(decimal Price, decimal Quantity);

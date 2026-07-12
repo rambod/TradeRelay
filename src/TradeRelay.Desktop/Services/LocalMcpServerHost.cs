@@ -11,6 +11,7 @@ using TradeRelay.Core.Models;
 using TradeRelay.Core.Settings;
 using TradeRelay.Desktop.Mcp;
 using TradeRelay.Desktop.Security;
+using TradeRelay.Core.Risk;
 
 namespace TradeRelay.Desktop.Services;
 
@@ -20,6 +21,8 @@ internal sealed class LocalMcpServerHost(
     ApplicationMetadata metadata,
     TimeProvider timeProvider,
     ExchangeConnectionManager connectionManager,
+    OrderPreparationService orderPreparationService,
+    PreparedOrderStore preparedOrderStore,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -190,6 +193,8 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(timeProvider);
         builder.Services.AddSingleton(this);
         builder.Services.AddSingleton(connectionManager);
+        builder.Services.AddSingleton(orderPreparationService);
+        builder.Services.AddSingleton(preparedOrderStore);
 
         builder.Services
             .AddMcpServer(mcp =>
@@ -205,7 +210,8 @@ internal sealed class LocalMcpServerHost(
             .WithTools<SystemTools>()
             .WithTools<ConnectionTools>()
             .WithTools<MarketTools>()
-            .WithTools<AccountTools>();
+            .WithTools<AccountTools>()
+            .WithTools<RiskTools>();
 
         WebApplication application = builder.Build();
         application.UseHostFiltering();

@@ -1,0 +1,74 @@
+<UserControl
+    x:Class="TradeRelay.Desktop.Views.ApprovalsView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="using:TradeRelay.Desktop.ViewModels"
+    xmlns:core="using:TradeRelay.Core.Models"
+    x:DataType="viewModels:ApprovalsViewModel">
+  <Grid Margin="32,24" RowDefinitions="Auto,*" RowSpacing="18">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="sectionTitle" Text="Prepared simulations" />
+        <TextBlock Classes="muted" Text="Human approval records review intent only. Milestone 4 has no execution path." />
+      </StackPanel>
+      <Border Grid.Column="1" Classes="infoBadge" Padding="10,6"><TextBlock Text="NON-EXECUTABLE" /></Border>
+    </Grid>
+    <Grid Grid.Row="1" ColumnDefinitions="2*,3*" ColumnSpacing="18">
+      <Border Classes="panel" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Margin="16,14" FontWeight="SemiBold" Text="Session plans" />
+          <ListBox Grid.Row="1" ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectedOrder, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="core:PreparedOrder">
+                <Grid Margin="8,7" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                  <TextBlock FontWeight="SemiBold" Text="{Binding Order.Symbol}" />
+                  <TextBlock Grid.Column="1" Classes="value" Text="{Binding State}" />
+                  <TextBlock Grid.Row="1" Classes="muted" Text="{Binding ClientOrderId}" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Classes="muted" Text="{Binding Environment}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+      <Border Grid.Column="1" Classes="panel" Padding="22">
+        <Grid>
+        <Grid RowDefinitions="Auto,*" IsVisible="{Binding HasSelection}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4">
+              <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding SelectedTitle}" />
+              <TextBlock Classes="muted" Text="{Binding SelectedEnvironment}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="3">
+              <TextBlock Classes="value" Text="{Binding SelectedState}" />
+              <TextBlock Classes="muted" Text="{Binding SelectedExpiry}" />
+            </StackPanel>
+          </Grid>
+          <ScrollViewer Grid.Row="1" Margin="0,18,0,0">
+            <StackPanel Spacing="14">
+              <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Requested" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedRequested}" TextWrapping="Wrap" /></Grid>
+              <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Normalized" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedNormalized}" TextWrapping="Wrap" /></Grid>
+              <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Protection" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedProtection}" TextWrapping="Wrap" /></Grid>
+              <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Risk estimate" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedRisk}" TextWrapping="Wrap" /></Grid>
+              <Separator />
+              <TextBlock FontWeight="SemiBold" Text="Warnings and assumptions" />
+              <TextBlock Classes="warningText" Text="{Binding SelectedWarnings}" TextWrapping="Wrap" />
+              <TextBlock FontWeight="SemiBold" Text="Immutable identifiers" />
+              <TextBlock Classes="mono" Text="{Binding SelectedIds}" TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="primary" Command="{Binding ApproveCommand}" Content="Approve simulation" />
+                <Button Classes="danger" Command="{Binding RejectCommand}" Content="Reject" />
+              </StackPanel>
+              <TextBlock Classes="statusText" Text="{Binding ActionMessage}" TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460" Spacing="10" IsVisible="{Binding IsEmpty}">
+          <TextBlock HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Text="No simulations in this session" />
+          <TextBlock Classes="muted" Text="An MCP client can call prepare_order to create an expiring, non-executable local plan. Invalid requests are never stored." TextAlignment="Center" TextWrapping="Wrap" />
+        </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

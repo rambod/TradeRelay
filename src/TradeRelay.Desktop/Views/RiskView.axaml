@@ -1,0 +1,59 @@
+<UserControl
+    x:Class="TradeRelay.Desktop.Views.RiskView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="using:TradeRelay.Desktop.ViewModels"
+    x:DataType="viewModels:RiskViewModel">
+  <ScrollViewer>
+    <Grid Margin="32,24" ColumnDefinitions="3*,2*" ColumnSpacing="24">
+      <StackPanel Spacing="18">
+        <StackPanel Spacing="5">
+          <TextBlock Classes="sectionTitle" Text="Risk settings" />
+          <TextBlock Classes="muted" MaxWidth="620" Text="These limits govern calculations and every new simulated order plan. Existing plans keep their original snapshot." TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Classes="panel" Padding="22">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="fieldLabel" Text="Allowed USDT perpetual symbols · one per line" />
+            <TextBox AcceptsReturn="True" MinHeight="112" Text="{Binding AllowedSymbolsText, Mode=TwoWay}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="14" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+              <StackPanel Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum risk per trade (%)" /><TextBox Text="{Binding MaxRiskPercent, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum notional (USD)" /><TextBox Text="{Binding MaxNotionalUsd, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Row="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum open positions" /><TextBox Text="{Binding MaxOpenPositions, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Row="1" Grid.Column="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum leverage" /><TextBox Text="{Binding MaxLeverage, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Row="2" Spacing="6"><TextBlock Classes="fieldLabel" Text="Prepared-plan expiry (seconds)" /><TextBox Text="{Binding ExpirySeconds, Mode=TwoWay}" /></StackPanel>
+            </Grid>
+            <Separator />
+            <CheckBox Content="Require stop loss" IsChecked="{Binding RequireStopLoss, Mode=TwoWay}" />
+            <CheckBox Content="Require manual approval for Demo" IsChecked="{Binding RequireManualApprovalForDemo, Mode=TwoWay}" />
+            <CheckBox Content="Require manual approval for Live" IsChecked="{Binding RequireManualApprovalForLive, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Command="{Binding SaveCommand}" Content="Save risk settings" />
+              <Button Classes="quiet" Command="{Binding DiscardCommand}" Content="Discard changes" />
+            </StackPanel>
+            <TextBlock Classes="statusText" Text="{Binding ValidationMessage}" TextWrapping="Wrap" />
+            <TextBlock Classes="warningText" Text="{Binding WarningMessage}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="18">
+        <TextBlock Classes="sectionTitle" Text="How estimates work" />
+        <Border Classes="panel" Padding="20">
+          <StackPanel Spacing="12">
+            <TextBlock FontWeight="SemiBold" Text="Linear-contract estimate" />
+            <TextBlock Classes="mono" Text="risk per unit = |entry − stop|" />
+            <TextBlock Classes="mono" Text="estimated risk = risk per unit × quantity" />
+            <TextBlock Classes="mono" Text="account risk % = risk ÷ equity × 100" />
+            <Separator />
+            <TextBlock Classes="muted" Text="Quantity rounds down to the exchange step. Stop prices normalize conservatively so rounding cannot understate estimated risk." TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <Border Classes="warningPanel" Padding="18">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="warningTitle" Text="Estimate, not guarantee" />
+            <TextBlock Classes="warningText" Text="Fees, slippage, funding, gaps, liquidation behavior, and partial fills can make realized loss different from this estimate." TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TradeRelay.Core.Models;
 using TradeRelay.Core.Settings;
+using TradeRelay.Core.Risk;
 using TradeRelay.Desktop.Mcp;
 using TradeRelay.Desktop.Services;
 
@@ -21,12 +22,15 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private readonly IClipboardService _clipboardService;
     private readonly IUiDispatcher _uiDispatcher;
     private readonly TimeProvider _timeProvider;
+    private readonly PreparedOrderStore _preparedOrderStore;
     private CancellationTokenSource? _messageClearCancellation;
     private McpServerSnapshot _serverSnapshot;
     private ProviderConnectionSnapshot _providerSnapshot;
 
     [ObservableProperty] private bool _isDashboardSelected = true;
     [ObservableProperty] private bool _isCredentialsSelected;
+    [ObservableProperty] private bool _isRiskSelected;
+    [ObservableProperty] private bool _isApprovalsSelected;
     [ObservableProperty] private TradingEnvironment _selectedEnvironment;
     [ObservableProperty] private string _apiKey = string.Empty;
     [ObservableProperty] private string _apiSecret = string.Empty;
@@ -49,6 +53,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         LocalMcpServerHost serverHost,
         LocalMcpTokenService tokenService,
         ExchangeConnectionManager connectionManager,
+        PreparedOrderStore preparedOrderStore,
+        RiskViewModel risk,
+        ApprovalsViewModel approvals,
         ApplicationMetadata metadata,
         IClipboardService clipboardService,
         IUiDispatcher uiDispatcher,
@@ -61,6 +68,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
         _uiDispatcher = uiDispatcher ?? throw new ArgumentNullException(nameof(uiDispatcher));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _preparedOrderStore = preparedOrderStore ?? throw new ArgumentNullException(nameof(preparedOrderStore));
         ArgumentNullException.ThrowIfNull(metadata);
 
         AppVersion = metadata.Version;
@@ -70,6 +78,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _rememberCredentials = settings.Bybit.RememberCredentials;
         _serverHost.StateChanged += OnServerStateChanged;
         _connectionManager.StateChanged += OnProviderStateChanged;
+        _preparedOrderStore.Changed += OnPreparedOrderChanged;
+        Risk = risk;
+        Approvals = approvals;
     }
 
     /// <summary>
@@ -90,7 +101,10 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current development milestone label.
     /// </summary>
-    public string DevelopmentStatus => "Milestone 3 · Secure read-only exchange connection";
+    public string DevelopmentStatus => "Milestone 4 · Risk and non-executable order simulations";
+
+    public RiskViewModel Risk { get; }
+    public ApprovalsViewModel Approvals { get; }
 
     public IReadOnlyList<TradingEnvironment> Environments { get; } = Enum.GetValues<TradingEnvironment>();
 
@@ -166,7 +180,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current pending-approval count.
     /// </summary>
-    public string PendingApprovalCount => "0";
+    public string PendingApprovalCount => _preparedOrderStore.GetPending().Count.ToString();
 
     public string RestHealth => _providerSnapshot.RestHealth.ToString();
     public string StreamHealth => _providerSnapshot.StreamHealth.ToString();
@@ -177,7 +191,6 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     /// <summary>
     /// Gets the bearer token or its masked representation.
-    /// </summary>
     public string DisplayedToken => IsTokenRevealed
         ? _tokenService.CurrentToken
         : LocalMcpTokenService.MaskedToken;
@@ -199,10 +212,16 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     }
 
     [RelayCommand]
-    private void ShowDashboard() { IsDashboardSelected = true; IsCredentialsSelected = false; }
+    private void ShowDashboard() => SelectPage(dashboard: true);
 
     [RelayCommand]
-    private void ShowCredentials() { IsDashboardSelected = false; IsCredentialsSelected = true; }
+    private void ShowCredentials() => SelectPage(credentials: true);
+
+    [RelayCommand]
+    private void ShowRisk() => SelectPage(risk: true);
+
+    [RelayCommand]
+    private void ShowApprovals() => SelectPage(approvals: true);
 
     [RelayCommand]
     private async Task TestConnectionAsync(CancellationToken cancellationToken)
@@ -285,6 +304,8 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     {
         _serverHost.StateChanged -= OnServerStateChanged;
         _connectionManager.StateChanged -= OnProviderStateChanged;
+        _preparedOrderStore.Changed -= OnPreparedOrderChanged;
+        Approvals.Dispose();
         CancellationTokenSource? cancellation = Interlocked.Exchange(ref _messageClearCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
@@ -318,6 +339,17 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private void OnProviderStateChanged(object? sender, ProviderConnectionSnapshot snapshot) =>
         _uiDispatcher.Post(() => ApplyProviderSnapshot(snapshot));
+
+    private void OnPreparedOrderChanged(object? sender, PreparedOrder order) =>
+        _uiDispatcher.Post(() => OnPropertyChanged(nameof(PendingApprovalCount)));
+
+    private void SelectPage(bool dashboard = false, bool credentials = false, bool risk = false, bool approvals = false)
+    {
+        IsDashboardSelected = dashboard;
+        IsCredentialsSelected = credentials;
+        IsRiskSelected = risk;
+        IsApprovalsSelected = approvals;
+    }
 
     private void ApplyProviderSnapshot(ProviderConnectionSnapshot snapshot)
     {

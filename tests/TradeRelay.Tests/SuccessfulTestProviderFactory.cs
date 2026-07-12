@@ -39,7 +39,7 @@ internal sealed class SuccessfulTestProviderFactory : IExchangeProviderFactory
     {
         public Task<TickerSnapshot> GetTickerAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new TickerSnapshot(symbol.ToUpperInvariant(), 100m, 99m, 101m, 110m, 90m, 1000m, DateTimeOffset.UtcNow));
         public Task<IReadOnlyList<Candle>> GetCandlesAsync(string symbol, CandleInterval interval, int limit, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Candle>>([new(symbol.ToUpperInvariant(), interval, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow, 99m, 101m, 98m, 100m, 10m)]);
-        public Task<InstrumentInfo> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new InstrumentInfo(symbol.ToUpperInvariant(), "Trading", .1m, .001m, .001m, 100m, 5m, 100m, "LinearPerpetual"));
+        public Task<InstrumentInfo> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new InstrumentInfo(symbol.ToUpperInvariant(), "Trading", .1m, .001m, .001m, 100m, 50m, 5m, 100m, "LinearPerpetual"));
         public Task<OrderBookSnapshot> GetOrderBookAsync(string symbol, int depth, CancellationToken cancellationToken) => Task.FromResult(new OrderBookSnapshot(symbol.ToUpperInvariant(), [new(99m, 1m)], [new(101m, 1m)], DateTimeOffset.UtcNow));
     }
 }

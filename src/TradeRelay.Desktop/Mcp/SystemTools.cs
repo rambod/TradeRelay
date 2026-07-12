@@ -3,6 +3,7 @@ using ModelContextProtocol.Server;
 using TradeRelay.Core.Models;
 using TradeRelay.Core.Settings;
 using TradeRelay.Desktop.Services;
+using TradeRelay.Core.Risk;
 
 namespace TradeRelay.Desktop.Mcp;
 
@@ -11,6 +12,7 @@ internal sealed class SystemTools(
     LocalMcpServerHost serverHost,
     AppSettings settings,
     ExchangeConnectionManager connectionManager,
+    PreparedOrderStore preparedOrderStore,
     ApplicationMetadata metadata,
     TimeProvider timeProvider)
 {
@@ -45,7 +47,7 @@ internal sealed class SystemTools(
             provider.StreamHealth,
             provider.CredentialLoaded,
             provider.CredentialSummary,
-            PendingApprovalCount: 0,
+            PendingApprovalCount: preparedOrderStore.GetPending().Count,
             timestamp);
 
         return new ToolResult<SystemStatusSnapshot>(

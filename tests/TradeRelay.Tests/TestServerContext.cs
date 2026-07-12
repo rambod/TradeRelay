@@ -6,6 +6,7 @@ using TradeRelay.Desktop.Security;
 using TradeRelay.Core.Security;
 using TradeRelay.Core.Providers;
 using TradeRelay.Core.Models;
+using TradeRelay.Core.Risk;
 
 namespace TradeRelay.Tests;
 
@@ -21,6 +22,10 @@ internal sealed class TestServerContext : IAsyncDisposable
 
     public LocalMcpServerHost Host { get; }
     public ExchangeConnectionManager ConnectionManager { get; }
+    public PreparedOrderStore PreparedOrderStore { get; }
+    public OrderPreparationService OrderPreparationService { get; }
+    public ApplicationSettingsStore SettingsStore { get; }
+    public RiskEngine RiskEngine { get; }
     private string DataDirectory { get; set; } = string.Empty;
 
     public static TestServerContext Create(
@@ -67,18 +72,24 @@ internal sealed class TestServerContext : IAsyncDisposable
         TimeProvider = timeProvider;
         var session = new SessionCredentialStore();
         DataDirectory = Path.Combine(Path.GetTempPath(), "TradeRelay.Tests", Guid.NewGuid().ToString("N"));
+        SettingsStore = new ApplicationSettingsStore(new ApplicationDataPaths(DataDirectory));
         ConnectionManager = new ExchangeConnectionManager(
             settings,
-            new ApplicationSettingsStore(new ApplicationDataPaths(DataDirectory)),
+            SettingsStore,
             new CredentialStoreCoordinator(session, session),
             providerFactory,
             NullLogger<ExchangeConnectionManager>.Instance);
+        RiskEngine = new RiskEngine();
+        PreparedOrderStore = new PreparedOrderStore(timeProvider);
+        OrderPreparationService = new OrderPreparationService(ConnectionManager, RiskEngine, PreparedOrderStore, settings);
         Host = new LocalMcpServerHost(
             settings,
             tokenService,
             metadata,
             timeProvider,
             ConnectionManager,
+            OrderPreparationService,
+            PreparedOrderStore,
             logger);
     }
 

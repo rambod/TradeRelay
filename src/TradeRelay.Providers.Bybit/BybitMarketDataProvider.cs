@@ -36,7 +36,7 @@ internal sealed class BybitMarketDataProvider(IBybitRestClient client, TimeProvi
         BybitLinearInverseSymbol instrument = BybitResult.Require(result).List.SingleOrDefault() ?? throw new ProviderException("INVALID_INPUT", "The requested USDT perpetual instrument was not found.");
         BybitLinearInverseLotSizeFilter lot = instrument.LotSizeFilter ?? throw new ProviderException("PROVIDER_UNAVAILABLE", "Instrument quantity limits are unavailable.");
         BybitLinearInversePriceFilter price = instrument.PriceFilter ?? throw new ProviderException("PROVIDER_UNAVAILABLE", "Instrument price limits are unavailable.");
-        return new InstrumentInfo(instrument.Name, instrument.Status.ToString(), price.TickSize, lot.QuantityStep, lot.MinOrderQuantity, lot.MaxOrderQuantity, lot.MinNotionalValue, instrument.LeverageFilter?.MaxLeverage, instrument.ContractType.ToString());
+        return new InstrumentInfo(instrument.Name, instrument.Status.ToString(), price.TickSize, lot.QuantityStep, lot.MinOrderQuantity, lot.MaxOrderQuantity, lot.MaxMarketOrderQuantity, lot.MinNotionalValue, instrument.LeverageFilter?.MaxLeverage, instrument.ContractType.ToString());
     }
 
     public async Task<OrderBookSnapshot> GetOrderBookAsync(string symbol, int depth, CancellationToken cancellationToken)

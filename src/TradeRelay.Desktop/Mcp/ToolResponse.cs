@@ -16,6 +16,12 @@ internal static class ToolResponse
         return new ToolResult<T>(false, code, message, default, Guid.NewGuid().ToString("N"), environment, timestamp);
     }
 
+    public static ToolResult<T> Result<T>(bool success, string code, string message, T data, TradingEnvironment environment, TimeProvider timeProvider)
+    {
+        DateTimeOffset timestamp = timeProvider.GetUtcNow();
+        return new ToolResult<T>(success, code, message, data, Guid.NewGuid().ToString("N"), environment, timestamp);
+    }
+
     public static async Task<ToolResult<T>> RunAsync<T>(Func<CancellationToken, Task<T>> action, string message, TradingEnvironment environment, TimeProvider timeProvider, CancellationToken cancellationToken)
     {
         try { return Success(await action(cancellationToken).ConfigureAwait(false), message, environment, timeProvider); }

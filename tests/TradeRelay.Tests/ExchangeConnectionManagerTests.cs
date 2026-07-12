@@ -97,7 +97,7 @@ public sealed class ExchangeConnectionManagerTests
     {
         public Task<TickerSnapshot> GetTickerAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new TickerSnapshot(symbol, 1, 1, 1, 1, 1, 1, DateTimeOffset.UtcNow));
         public Task<IReadOnlyList<Candle>> GetCandlesAsync(string symbol, CandleInterval interval, int limit, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Candle>>([]);
-        public Task<InstrumentInfo> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new InstrumentInfo(symbol, "Trading", .1m, .001m, .001m, 100m, 5m, 100m, "LinearPerpetual"));
+        public Task<InstrumentInfo> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) => Task.FromResult(new InstrumentInfo(symbol, "Trading", .1m, .001m, .001m, 100m, 50m, 5m, 100m, "LinearPerpetual"));
         public Task<OrderBookSnapshot> GetOrderBookAsync(string symbol, int depth, CancellationToken cancellationToken) => Task.FromResult(new OrderBookSnapshot(symbol, [], [], DateTimeOffset.UtcNow));
     }
 }

@@ -3,11 +3,11 @@
 TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
 
 > [!WARNING]
-> TradeRelay is under active development. Milestone 3 provides read-only Bybit connectivity, but no order preparation or trading implementation. It must not be used for live trading.
+> TradeRelay is under active development. Milestone 4 provides non-executable risk validation and simulated order preparation, but no exchange-write implementation. It must not be used for live trading.
 
 ## Current status
 
-Milestone 3 provides:
+Milestone 4 provides:
 
 - A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
 - Dashboard and credential control panels
@@ -17,11 +17,16 @@ Milestone 3 provides:
 - Bybit Demo and Live credential validation with withdrawal-permission rejection
 - Read-only USDT perpetual market, Unified Account, order, position, and WebSocket-health access
 - MCP tools for system status, connection status, tickers, candles, instruments, order books, balances, positions, and open orders
-- Unit, Kestrel integration, security, and optional Bybit Demo integration coverage
+- Instrument-aware position sizing, order normalization, and risk validation
+- Expiring immutable prepared simulations with idempotent request IDs and SHA-256 hashes
+- Desktop-only approval and rejection with Demo auto-approval policy
+- Risk and Approvals control-panel views with explicit non-executable status
+- MCP tools for risk settings, position sizing, validation, preparation, and approval inspection
+- Unit, Kestrel integration, security, concurrency, and optional Bybit Demo integration coverage
 
-Risk validation, order preparation, approvals, and all exchange write behavior are intentionally not implemented yet. Even a read/write API key remains read-only inside TradeRelay.
+Order execution, cancellation, trading enablement, persistent audit logging, and all exchange write behavior are intentionally not implemented yet. Prepared and Approved mean locally reviewed simulation—not executable.
 
-Current version: `0.3.0`
+Current version: `0.4.0`
 
 ## Credential safety
 

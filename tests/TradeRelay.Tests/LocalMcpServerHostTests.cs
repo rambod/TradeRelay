@@ -93,7 +93,7 @@ public sealed class LocalMcpServerHostTests
             context.TokenService.CurrentToken);
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
-        Assert.Equal("0.3.0", client.ServerInfo.Version);
+        Assert.Equal("0.4.0", client.ServerInfo.Version);
         Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
@@ -103,11 +103,11 @@ public sealed class LocalMcpServerHostTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        Assert.Contains("0.3.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("0.4.0", structuredContent, StringComparison.Ordinal);
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
         Assert.Contains("ReadOnly", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
-        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders"];
+        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals"];
         foreach (string name in expected) Assert.Contains(tools, tool => tool.Name == name);
     }
 
@@ -131,7 +131,12 @@ public sealed class LocalMcpServerHostTests
             ("get_account_summary", null),
             ("get_wallet_balances", null),
             ("get_positions", null),
-            ("get_open_orders", null)
+            ("get_open_orders", null),
+            ("get_risk_settings", null),
+            ("calculate_position_size", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["entryPrice"] = 100m, ["stopLoss"] = 90m, ["accountRiskPercent"] = .1m }),
+            ("validate_order", new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["side"] = "Buy", ["orderType"] = "Limit", ["quantity"] = .1m, ["limitPrice"] = 100m, ["stopLoss"] = 90m, ["takeProfit"] = 120m }),
+            ("prepare_order", new Dictionary<string, object?> { ["clientRequestId"] = "mcp-integration-1", ["symbol"] = "BTCUSDT", ["side"] = "Buy", ["orderType"] = "Limit", ["quantity"] = .1m, ["limitPrice"] = 100m, ["stopLoss"] = 90m, ["takeProfit"] = 120m }),
+            ("get_pending_approvals", null)
         };
 
         foreach ((string name, IReadOnlyDictionary<string, object?>? arguments) in calls)
@@ -143,6 +148,12 @@ public sealed class LocalMcpServerHostTests
             Assert.Contains("\"success\":true", json, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("test-secret", json, StringComparison.Ordinal);
         }
+
+        PreparedOrder prepared = Assert.Single(context.PreparedOrderStore.GetAll());
+        McpClientTool getPrepared = Assert.Single(tools, item => item.Name == "get_prepared_order");
+        CallToolResult preparedResult = await getPrepared.CallAsync(new Dictionary<string, object?> { ["preparationId"] = prepared.PreparationId.ToString() });
+        Assert.NotEqual(true, preparedResult.IsError);
+        Assert.Contains(prepared.ClientOrderId, preparedResult.StructuredContent?.GetRawText(), StringComparison.Ordinal);
     }
 
     [Fact]

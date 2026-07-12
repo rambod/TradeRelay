@@ -9,6 +9,7 @@ using TradeRelay.Core.Providers;
 using TradeRelay.Core.Security;
 using TradeRelay.Desktop.Security;
 using TradeRelay.Providers.Bybit;
+using TradeRelay.Core.Risk;
 
 namespace TradeRelay.Desktop;
 
@@ -55,6 +56,9 @@ internal static class Program
             new LinuxSecretServiceCredentialStore(services.GetRequiredService<LinuxSecretServiceSecretStore>()));
         builder.Services.AddSingleton<CredentialStoreCoordinator>();
         builder.Services.AddSingleton<IExchangeProviderFactory, BybitExchangeProviderFactory>();
+        builder.Services.AddSingleton<RiskEngine>();
+        builder.Services.AddSingleton<PreparedOrderStore>();
+        builder.Services.AddSingleton<OrderPreparationService>();
         builder.Services.AddSingleton<LocalMcpTokenService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<LocalMcpTokenService>());
         builder.Services.AddSingleton<ExchangeConnectionManager>();
@@ -65,6 +69,8 @@ internal static class Program
         builder.Services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
         builder.Services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         builder.Services.AddSingleton<App>();
+        builder.Services.AddSingleton<RiskViewModel>();
+        builder.Services.AddSingleton<ApprovalsViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));
