@@ -22,7 +22,8 @@ public sealed class MainWindowViewModelTests
             context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
-            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher(), new RecordingShellService()),
+            CreateSettings(context),
             context.TradingControl,
             context.AuditLog,
             context.Metadata,
@@ -66,7 +67,8 @@ public sealed class MainWindowViewModelTests
             context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
-            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher(), new RecordingShellService()),
+            CreateSettings(context),
             context.TradingControl,
             context.AuditLog,
             context.Metadata,
@@ -107,7 +109,8 @@ public sealed class MainWindowViewModelTests
             context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
             new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
-            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+            new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher(), new RecordingShellService()),
+            CreateSettings(context),
             context.TradingControl,
             context.AuditLog,
             context.Metadata,
@@ -185,7 +188,7 @@ public sealed class MainWindowViewModelTests
     public async Task ActivityViewModel_FiltersLiveAuditEvents()
     {
         await using TestServerContext context = TestServerContext.Create();
-        using var viewModel = new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher());
+        using var viewModel = new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher(), new RecordingShellService());
         await context.AuditLog.TryWriteAsync(context.AuditLog.Create("cancel_order", "cancel_reconciled", "OK", TradingEnvironment.Demo, "correlation", "BTCUSDT"), default);
         await viewModel.RefreshCommand.ExecuteAsync(null);
         Assert.False(viewModel.IsEmpty);
@@ -204,13 +207,25 @@ public sealed class MainWindowViewModelTests
         context.LiveConfirmations,
         new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
         new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
-        new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
+        new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher(), new RecordingShellService()),
+        CreateSettings(context),
         context.TradingControl,
         context.AuditLog,
         context.Metadata,
         new RecordingClipboardService(),
         new ImmediateUiDispatcher(),
         TimeProvider.System);
+
+    private static SettingsViewModel CreateSettings(TestServerContext context) => new(
+        context.Settings,
+        context.SettingsStore,
+        context.Host,
+        context.TokenService,
+        context.Paths,
+        context.Metadata,
+        new RecordingShellService(),
+        new StubDiagnosticsExporter(),
+        new ImmediateUiDispatcher());
 
     private sealed class RecordingClipboardService : IClipboardService
     {
@@ -227,5 +242,20 @@ public sealed class MainWindowViewModelTests
     private sealed class ImmediateUiDispatcher : IUiDispatcher
     {
         public void Post(Action action) => action();
+    }
+
+    private sealed class RecordingShellService : IDesktopShellService
+    {
+        public bool TryOpenFolder(string path, out string? error)
+        {
+            error = null;
+            return true;
+        }
+    }
+
+    private sealed class StubDiagnosticsExporter : IDiagnosticsExporter
+    {
+        public Task<DiagnosticsExportResult> ExportAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new DiagnosticsExportResult(true, "OK", "Exported.", "/tmp/diagnostics.json"));
     }
 }

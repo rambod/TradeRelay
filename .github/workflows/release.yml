@@ -1,0 +1,188 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-ref:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - id: version
+        shell: bash
+        run: |
+          version=$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' Directory.Build.props)
+          test -n "$version"
+          printf 'value=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            [[ "$GITHUB_REF_NAME" == "v$version" ]]
+            [[ "$(git cat-file -t "$GITHUB_REF_NAME")" == "tag" ]]
+          fi
+
+  package:
+    needs: validate-ref
+    name: ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-15
+            script: macos
+            extension: zip
+          - rid: osx-x64
+            runner: macos-15-intel
+            script: macos
+            extension: zip
+          - rid: win-arm64
+            runner: windows-11-arm
+            script: windows
+            extension: zip
+          - rid: win-x64
+            runner: windows-2025
+            script: windows
+            extension: zip
+          - rid: linux-arm64
+            runner: ubuntu-24.04-arm
+            script: linux
+            extension: tar.gz
+          - rid: linux-x64
+            runner: ubuntu-24.04
+            script: linux
+            extension: tar.gz
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      TRADERELAY_VERSION: ${{ needs.validate-ref.outputs.version }}
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - run: dotnet restore --locked-mode
+      - name: Package macOS
+        if: matrix.script == 'macos'
+        shell: bash
+        run: eng/package-macos.sh '${{ matrix.rid }}'
+      - name: Package Linux
+        if: matrix.script == 'linux'
+        shell: bash
+        run: eng/package-linux.sh '${{ matrix.rid }}'
+      - name: Package Windows
+        if: matrix.script == 'windows'
+        shell: pwsh
+        run: eng/package-windows.ps1 -RuntimeIdentifier '${{ matrix.rid }}'
+      - name: Smoke-test Linux package
+        if: matrix.script == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          mkdir -p "$RUNNER_TEMP/smoke" "$RUNNER_TEMP/home"
+          tar -xzf "artifacts/release/TradeRelay-$TRADERELAY_VERSION-${{ matrix.rid }}.tar.gz" -C "$RUNNER_TEMP/smoke"
+          HOME="$RUNNER_TEMP/home" TRADERELAY_APP_DATA="$RUNNER_TEMP/appdata" xvfb-run -a "$RUNNER_TEMP/smoke/TradeRelay/TradeRelay" &
+          pid=$!
+          sleep 5
+          kill -0 "$pid"
+          kill -9 "$pid"
+          wait "$pid" || true
+      - name: Smoke-test macOS bundle
+        if: matrix.script == 'macos'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke" "$RUNNER_TEMP/home"
+          ditto -x -k "artifacts/release/TradeRelay-$TRADERELAY_VERSION-${{ matrix.rid }}.zip" "$RUNNER_TEMP/smoke"
+          HOME="$RUNNER_TEMP/home" TRADERELAY_APP_DATA="$RUNNER_TEMP/appdata" open -n "$RUNNER_TEMP/smoke/TradeRelay.app"
+          sleep 5
+          pgrep -x TradeRelay
+          pkill -9 -x TradeRelay
+      - name: Smoke-test Windows package
+        if: matrix.script == 'windows'
+        shell: pwsh
+        run: |
+          $smoke = Join-Path $env:RUNNER_TEMP 'smoke'
+          Expand-Archive "artifacts/release/TradeRelay-$env:TRADERELAY_VERSION-${{ matrix.rid }}.zip" $smoke
+          $env:TRADERELAY_APP_DATA = Join-Path $env:RUNNER_TEMP 'appdata'
+          $process = Start-Process (Join-Path $smoke 'TradeRelay.exe') -PassThru
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) { throw 'TradeRelay exited during the smoke window.' }
+          Stop-Process -Id $process.Id
+      - name: Attest archive provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: artifacts/release/TradeRelay-${{ needs.validate-ref.outputs.version }}-${{ matrix.rid }}.${{ matrix.extension }}
+      - name: Upload archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: TradeRelay-${{ matrix.rid }}
+          path: |
+            artifacts/release/TradeRelay-${{ needs.validate-ref.outputs.version }}-${{ matrix.rid }}.*
+          if-no-files-found: error
+
+  assemble:
+    needs: [validate-ref, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: TradeRelay-*
+          path: artifacts/release
+          merge-multiple: true
+      - run: python3 eng/verify-release.py artifacts/release '${{ needs.validate-ref.outputs.version }}'
+      - run: python3 eng/generate_dependencies.py artifacts/release/dependencies.json
+      - run: python3 eng/generate_release_metadata.py artifacts/release '${{ needs.validate-ref.outputs.version }}'
+      - name: Upload complete dry-run set
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: TradeRelay-${{ needs.validate-ref.outputs.version }}-release
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/*.tar.gz
+            artifacts/release/SHA256SUMS
+            artifacts/release/release-metadata.json
+            artifacts/release/dependencies.json
+            artifacts/release/RELEASE_NOTES.md
+          if-no-files-found: error
+      - name: Publish GitHub Release for annotated version tag
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            artifacts/release/*.zip \
+            artifacts/release/*.tar.gz \
+            artifacts/release/SHA256SUMS \
+            artifacts/release/release-metadata.json \
+            artifacts/release/dependencies.json \
+            --verify-tag \
+            --title "TradeRelay ${{ needs.validate-ref.outputs.version }}" \
+            --notes-file artifacts/release/RELEASE_NOTES.md

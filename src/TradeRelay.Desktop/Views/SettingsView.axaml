@@ -1,0 +1,89 @@
+<UserControl
+    x:Class="TradeRelay.Desktop.Views.SettingsView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="using:TradeRelay.Desktop.ViewModels"
+    x:DataType="viewModels:SettingsViewModel">
+  <ScrollViewer>
+    <Grid Margin="32" ColumnDefinitions="3*,2*" ColumnSpacing="24">
+      <StackPanel Grid.Column="0" Spacing="18">
+        <StackPanel Spacing="5">
+          <TextBlock Classes="sectionTitle" Text="Settings" />
+          <TextBlock Classes="muted" Text="Configure the local control plane and export non-secret support information." TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Classes="panel" Padding="22">
+          <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="3">
+                <TextBlock Classes="fieldLabel" Text="Local MCP server" />
+                <TextBlock Classes="muted" Text="The server always binds to 127.0.0.1 and requires bearer authentication." TextWrapping="Wrap" />
+              </StackPanel>
+              <Border Grid.Column="1" Classes="infoBadge" Padding="10,6">
+                <TextBlock Text="{Binding ServerState}" />
+              </Border>
+            </Grid>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="fieldLabel" Text="MCP port" />
+              <TextBox
+                  AutomationProperties.Name="MCP port"
+                  IsEnabled="{Binding IsPortEditingEnabled}"
+                  Text="{Binding McpPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              <TextBlock Classes="warningText" IsVisible="{Binding HasValidationError}" Text="{Binding ValidationError}" TextWrapping="Wrap" />
+              <TextBlock Classes="mono" Text="{Binding EndpointPreview}" TextWrapping="Wrap" />
+              <TextBlock Classes="muted" IsVisible="{Binding !IsPortEditingEnabled}" Text="Stop the MCP server before changing its port." />
+            </StackPanel>
+            <CheckBox
+                AutomationProperties.Name="Start MCP automatically"
+                Content="Start MCP automatically when TradeRelay opens"
+                IsChecked="{Binding StartMcpAutomatically, Mode=TwoWay}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding DirtyState}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="quiet" Command="{Binding DiscardCommand}" Content="Discard" />
+                <Button Classes="primary" Command="{Binding SaveCommand}" Content="Save settings" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="panel" Padding="22">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="fieldLabel" Text="Security and support" />
+            <TextBlock Classes="muted" Text="Exports include normalized runtime state and package versions only. Credentials, tokens, logs, raw audit events, and authenticated payloads are excluded." TextWrapping="Wrap" />
+            <WrapPanel ItemHeight="44" ItemWidth="210">
+              <Button Margin="0,0,8,8" Classes="quiet" Command="{Binding RotateTokenCommand}" Content="Rotate MCP token" />
+              <Button Margin="0,0,8,8" Classes="quiet" Command="{Binding OpenApplicationDataFolderCommand}" Content="Open app-data folder" />
+              <Button Margin="0,0,8,8" Classes="quiet" Command="{Binding OpenLogFolderCommand}" Content="Open log folder" />
+              <Button Margin="0,0,8,8" Classes="primary" Command="{Binding ExportDiagnosticsCommand}" Content="Export diagnostics" />
+            </WrapPanel>
+            <TextBlock Classes="statusText" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Spacing="18">
+        <TextBlock Classes="sectionTitle" Text="About" />
+        <Border Classes="panel" Padding="20">
+          <StackPanel Spacing="13">
+            <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Version" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding Version}" /></Grid>
+            <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="License" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding License}" /></Grid>
+            <Separator />
+            <TextBlock Classes="fieldLabel" Text="Repository" />
+            <TextBlock Classes="mono" Text="{Binding Repository}" TextWrapping="Wrap" />
+            <TextBlock Classes="fieldLabel" Text="Primary support" />
+            <TextBlock Classes="muted" Text="{Binding SupportedPlatforms}" TextWrapping="Wrap" />
+            <TextBlock Classes="fieldLabel" Text="Application data" />
+            <TextBlock Classes="mono" Text="{Binding ApplicationDataPath}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <Border Classes="warningPanel" Padding="18">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="warningTitle" Text="Safety remains session-bound" />
+            <TextBlock Classes="muted" Text="Automatic MCP startup never enables Demo or Live trading. Every launch starts with exchange writes disabled." TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

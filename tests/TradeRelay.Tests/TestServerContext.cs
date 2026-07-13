@@ -31,6 +31,9 @@ internal sealed class TestServerContext : IAsyncDisposable
     public TradingControlService TradingControl { get; }
     public TradingGate TradingGate { get; }
     public OrderExecutionService OrderExecutionService { get; }
+    public ApplicationDataPaths Paths { get; }
+    public SensitiveDataRedactor Redactor { get; }
+    public SafeLogService SafeLog { get; }
     private string DataDirectory { get; set; } = string.Empty;
 
     public static TestServerContext Create(
@@ -78,8 +81,10 @@ internal sealed class TestServerContext : IAsyncDisposable
         TimeProvider = timeProvider;
         var session = new SessionCredentialStore();
         DataDirectory = Path.Combine(Path.GetTempPath(), "TradeRelay.Tests", Guid.NewGuid().ToString("N"));
-        var paths = new ApplicationDataPaths(DataDirectory);
-        SettingsStore = new ApplicationSettingsStore(paths);
+        Paths = new ApplicationDataPaths(DataDirectory);
+        Redactor = new SensitiveDataRedactor();
+        SafeLog = new SafeLogService(Paths, timeProvider, Redactor);
+        SettingsStore = new ApplicationSettingsStore(Paths);
         ConnectionManager = new ExchangeConnectionManager(
             settings,
             SettingsStore,
@@ -90,7 +95,7 @@ internal sealed class TestServerContext : IAsyncDisposable
         PreparedOrderStore = new PreparedOrderStore(timeProvider);
         LiveConfirmations = new LiveActionConfirmationStore(timeProvider);
         OrderPreparationService = new OrderPreparationService(ConnectionManager, RiskEngine, PreparedOrderStore, settings);
-        AuditLog = new AuditLogService(paths, timeProvider);
+        AuditLog = new AuditLogService(Paths, timeProvider, Redactor);
         TradingControl = new TradingControlService(ConnectionManager, RiskEngine, settings, AuditLog, LiveConfirmations, timeProvider);
         TradingGate = new TradingGate(TradingControl, ConnectionManager, AuditLog, settings, RiskEngine);
         OrderExecutionService = new OrderExecutionService(ConnectionManager, TradingControl, TradingGate, OrderPreparationService, PreparedOrderStore, LiveConfirmations, AuditLog, timeProvider);
@@ -106,6 +111,7 @@ internal sealed class TestServerContext : IAsyncDisposable
             OrderExecutionService,
             TradingControl,
             AuditLog,
+            SafeLog,
             logger);
     }
 

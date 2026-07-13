@@ -12,7 +12,7 @@ public sealed class AuditAndTradingControlTests
         string root = Path.Combine(Path.GetTempPath(), "TradeRelay.AuditTests", Guid.NewGuid().ToString("N"));
         try
         {
-            var audit = new AuditLogService(new ApplicationDataPaths(root), TimeProvider.System);
+            var audit = new AuditLogService(new ApplicationDataPaths(root), TimeProvider.System, new SensitiveDataRedactor());
             AuditEvent item = audit.Create("execute_prepared_order", "execution_requested", "STARTED", TradingEnvironment.Demo, "correlation", "BTCUSDT", providerResult: "authorization=sentinel-secret");
             Assert.True(await audit.TryWriteAsync(item, default));
             var loaded = await audit.LoadRecentAsync(default);
@@ -34,7 +34,7 @@ public sealed class AuditAndTradingControlTests
         await File.WriteAllTextAsync(Path.Combine(root, "audit"), "not-a-directory");
         try
         {
-            var audit = new AuditLogService(new ApplicationDataPaths(root), TimeProvider.System);
+            var audit = new AuditLogService(new ApplicationDataPaths(root), TimeProvider.System, new SensitiveDataRedactor());
             Assert.False(await audit.TryWriteAsync(audit.Create("test", "write", "STARTED", TradingEnvironment.Demo, "id"), default));
             Assert.False(audit.Health.Healthy);
             ProviderException exception = await Assert.ThrowsAsync<ProviderException>(() => audit.WriteRequiredAsync(audit.Create("test", "write", "STARTED", TradingEnvironment.Demo, "id"), default));

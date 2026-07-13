@@ -14,3 +14,8 @@ logs/
 audit/
 artifacts/
 TestResults/
+.DS_Store
+diagnostics/
+publish/
+__pycache__/
+*.pyc

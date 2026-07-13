@@ -7,6 +7,8 @@ TradeRelay is a local control plane for exchange access. It reduces accidental o
 - The MCP server binds only to `127.0.0.1` and requires a cryptographically random bearer token.
 - API credentials and the MCP token use operating-system protected storage when available and otherwise remain session-only.
 - Credentials, tokens, authorization headers, signatures, and raw authenticated payloads are excluded from MCP results, settings, logs, and JSONL audit events.
+- A shared redactor protects audit, safe logs, and diagnostics. Daily safe logs contain fixed messages, normalized properties, and exception types only—never exception messages or stack traces.
+- Diagnostics exports contain non-secret runtime health, risk settings, bounded safe errors, and package versions. They exclude raw audit entries and log files and receive a final forbidden-field/value scan before atomic write.
 - API keys with withdrawal permission are rejected. Read/write, unbound, master-account, broad-permission, and expiring keys are shown as explicit warnings.
 
 ## Trading enablement
@@ -36,6 +38,10 @@ Order submission is never blindly retried. REST acknowledgement is provisional: 
 Exchange writes require a successful pre-action audit append. Later audit failure faults audit health and blocks subsequent writes. Audit files are append-only UTF-8 JSONL under the normal per-user application-data directory.
 
 Shutdown disables new writes first, expires unexecuted plans and Live confirmations, permits active reconciliation for a short bounded interval, records shutdown, disconnects streams, disposes clients, and stops the local server. It never performs automatic exchange cleanup.
+
+Automatic MCP startup is an operator convenience only. A startup fault leaves the desktop open and trading disabled. Changing the stopped MCP port or rotating its token does not enable trading.
+
+Release packages are reproducibly structured, checksummed, dependency-manifested, and provenance-attested. Signing is optional but its state is explicit; partially configured signing fails rather than silently producing an incorrectly labeled artifact.
 
 ## Testing policy
 

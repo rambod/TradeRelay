@@ -1,76 +1,110 @@
 # TradeRelay
 
-TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
+<img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="128" height="128">
 
-> [!WARNING]
-> TradeRelay is under active development. Milestone 6 supports session-gated Bybit Demo and Live writes. Use Demo first; Live can affect real funds and positions.
+TradeRelay is a safety-first local desktop control panel that connects MCP-capable coding agents to Bybit market data and explicitly approved trading workflows. Version `1.0.0` supports Unified Account USDT-linear perpetuals on Bybit Demo and Live.
 
-## Current status
+TradeRelay is not a hosted trading service, autonomous strategy, signal provider, or financial adviser. It does not persist trading enablement, blindly retry ambiguous submissions, or clean up exchange orders when the application stops.
 
-Milestone 6 provides:
+> [!CAUTION]
+> Live trading can affect real funds and positions. Start with Bybit Demo, use narrowly scoped API keys, and never use a key with withdrawal permission. TradeRelay rejects withdrawal-enabled keys.
 
-- A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
-- Dashboard and credential control panels
-- A repeatedly startable and stoppable loopback-only MCP server
-- Protected bearer-token storage with session fallback and token rotation
-- Session-only credentials by default, with optional macOS Keychain, Windows DPAPI, or Linux Secret Service persistence
-- Bybit Demo and Live credential validation with withdrawal-permission rejection
-- Read-only USDT perpetual market, Unified Account, order, position, and WebSocket-health access
-- MCP tools for system status, connection status, tickers, candles, instruments, order books, balances, positions, and open orders
-- Instrument-aware position sizing, order normalization, and risk validation
-- Expiring immutable prepared simulations with idempotent request IDs and SHA-256 hashes
-- Desktop-only approval and rejection with environment-specific policy
-- Risk, Approvals, and execution-focused Activity views
-- MCP tools for risk settings, position sizing, validation, preparation, and approval inspection
-- Session-only, desktop-enabled Bybit Demo and Live trading with one centralized safety gate
-- Exact-phrase Live enablement, persistent Live state, emergency disable, and connection-bound prepared plans
-- Configurable Live market-price drift rejection using immutable risk snapshots
-- Short-lived, single-use desktop confirmations for Live cancel-all and close-position actions
-- Exactly-once prepared-order submission, WebSocket/REST reconciliation, partial-fill reporting, and ambiguous-state protection
-- Environment-aware order cancellation, explicit cancel-all, reduce-only position closing, and full-position trading stops
-- Redacted, append-only daily JSONL activity auditing
-- Unit, Kestrel integration, security, concurrency, and optional Bybit Demo integration coverage
+## Safety model
 
-Persistent trading enablement, databases, and automatic exchange cleanup are intentionally not implemented. Stopping or disabling TradeRelay never cancels orders, closes positions, or removes protection.
+- Every launch starts with Demo and Live writes disabled.
+- The MCP server binds only to `127.0.0.1` and requires a random bearer token.
+- New orders originate from immutable, expiring prepared plans and use centralized risk, approval, audit, and reconciliation controls.
+- Live enablement requires a desktop readiness review and the exact phrase `ENABLE LIVE TRADING`.
+- Live cancel-all and close-position actions require short-lived desktop confirmation tickets.
+- `Disable New Trading Actions` blocks new exchange writes immediately; it does not cancel orders, close positions, or remove protection.
+- REST order acknowledgements remain provisional. TradeRelay uses private-stream evidence and one REST fallback lookup, never a blind placement retry.
 
-Current version: `0.6.0`
+See [the complete security model](docs/SECURITY_MODEL.md).
 
-## Credential safety
+## Screenshots
 
-- Use Bybit Demo first and create separate Demo credentials.
-- Never use an API key with withdrawal permission; TradeRelay rejects it.
-- Leave **Remember credentials** disabled for session-only storage.
-- When enabled, TradeRelay uses the operating system's protected credential store and never writes credentials to `settings.json`.
+Disabled Demo dashboard:
 
-Optional Bybit Demo integration tests use `TRADERELAY_BYBIT_DEMO_API_KEY` and `TRADERELAY_BYBIT_DEMO_API_SECRET`. They do nothing when those variables are absent and never target Live.
+![TradeRelay disabled Demo dashboard](docs/images/demo-dashboard.png)
 
-Write-capable Demo integration tests additionally require an explicit `TRADERELAY_RUN_DEMO_TRADING_TESTS=1` opt-in and never run in normal test execution.
+Live enablement confirmation:
 
-TradeRelay contains no automated real-Live write test. Live verification is limited to fake-provider safety integration and manual read-only/operator checks.
+![TradeRelay Live confirmation flow](docs/images/live-confirmation.png)
 
-## Release roadmap
+Both release screenshots use masked tokens and contain no credentials or account data.
 
-| Milestone | Version |
-| --- | --- |
-| 1 — Scaffold and naming correction | `0.1.0` |
-| 2 — Control panel and MCP host | `0.2.0` |
-| 3 — Credentials and read-only exchange connection | `0.3.0` |
-| 4 — Risk engine and order preparation | `0.4.0` |
-| 5 — Demo execution | `0.5.0` |
-| 6 — Live safety | `0.6.0` |
-| 7 — Production-ready release | `1.0.0` |
+## Supported platforms and clients
+
+Official portable builds are self-contained, untrimmed, non-AOT, and available for ARM64 and x64:
+
+| Platform | Primary support | Archive |
+| --- | --- | --- |
+| macOS | macOS 14+ | ZIP containing exactly `TradeRelay.app` |
+| Windows | Windows 11 24H2+ | Portable ZIP |
+| Linux | Ubuntu 24.04 under X11 or XWayland | Portable `.tar.gz` |
+
+Codex and Claude Code are documented MCP clients. Other local clients may work when they support Streamable HTTP plus an environment-derived bearer header.
+
+## Install and verify
+
+Download the archive for your platform plus `SHA256SUMS` from the GitHub Release. Verify it before opening:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+On macOS, `shasum -a 256 TradeRelay-1.0.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.0.0-win-x64.zip -Algorithm SHA256`.
+
+Packages clearly report their signing state in `release-metadata.json`. Unsigned builds are permitted when maintainers have not configured signing credentials; the operating system may show an unverified-publisher warning. Do not bypass a warning unless the checksum matches the official release.
+
+Linux archives install nothing automatically. Extract the archive, read `README-LINUX.txt`, and run `./launch-traderelay`. Ubuntu dependencies are documented there and in [development documentation](docs/DEVELOPMENT.md).
+
+## First run
+
+1. Open TradeRelay. Trading is disabled.
+2. Keep the environment on **Demo**.
+3. Add a separate Bybit Demo API key without withdrawal permission. Session-only storage is the default.
+4. Test and save the connection.
+5. Review Risk settings.
+6. Start the local MCP server and rotate/copy the bearer token if needed.
+7. Configure your local client with `TRADERELAY_MCP_TOKEN` using [Codex setup](docs/CODEX_SETUP.md) or [Claude Code setup](docs/CLAUDE_CODE_SETUP.md).
+8. Prepare and review simulated plans before explicitly enabling Demo trading.
+
+For Live, select Live credentials, verify every warning, review the complete risk summary, and use the exact desktop confirmation. Use **Disable New Trading Actions** whenever you no longer need writes.
+
+## Bybit capability
+
+TradeRelay supports Bybit Unified Trading Account and USDT-linear perpetuals. Public market data, account inspection, positions, open orders, risk calculation, prepared plans, Demo execution, Live session gating, cancellation, reduce-only position closing, trading-stop updates, and reconciliation are normalized behind exchange-neutral contracts. Binance and other exchange adapters are future work.
+
+## Local data and privacy
+
+TradeRelay has no telemetry or crash-upload service. Non-secret settings, protected credential integrations, daily safe logs, JSONL activity audit, and diagnostics are stored under:
+
+- macOS: `~/Library/Application Support/TradeRelay`
+- Windows: `%LOCALAPPDATA%\TradeRelay`
+- Linux: `~/.config/TradeRelay`
+
+Diagnostics exports exclude credentials, tokens, authorization data, signatures, raw authenticated payloads, raw audit events, and log files.
+
+## MCP setup
+
+Set the token in the client process environment without writing its value into client configuration:
+
+```bash
+export TRADERELAY_MCP_TOKEN='paste-the-current-token'
+```
+
+The default endpoint is `http://127.0.0.1:5050/mcp`. Settings can change the stopped server port from `1024` through `65535` or enable automatic MCP startup. Automatic startup never enables trading.
 
 ## Development
 
-Prerequisites:
-
-- .NET 10 SDK
-
-Build and test from the repository root:
+The repository pins .NET SDK `10.0.301` and NuGet lock files:
 
 ```bash
-dotnet build
-dotnet test
+dotnet restore --locked-mode
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-build
+dotnet format --no-restore --verify-no-changes
 ```
 
 Run the desktop shell:
@@ -79,15 +113,37 @@ Run the desktop shell:
 dotnet run --project src/TradeRelay.Desktop
 ```
 
-## Project structure
+Project structure:
 
 ```text
-src/TradeRelay.Desktop/         Avalonia shell and application composition
-src/TradeRelay.Core/            Exchange-neutral models and settings
-src/TradeRelay.Providers.Bybit/ Bybit adapter boundary
-tests/TradeRelay.Tests/         Unit tests
+src/TradeRelay.Desktop/         Avalonia shell, in-process MCP host, and application services
+src/TradeRelay.Core/            Exchange-neutral domain, settings, risk, and safety contracts
+src/TradeRelay.Providers.Bybit/ Bybit adapter boundary; all Bybit.Net types remain here
+tests/TradeRelay.Tests/         Unit and loopback integration tests
+eng/                            Reproducible scans, manifests, and packaging scripts
+packaging/                      Portable-platform metadata
 ```
 
-## Disclaimer
+See [development](docs/DEVELOPMENT.md) and [contributing](CONTRIBUTING.md) for the full workflow.
 
-TradeRelay is developer tooling, not financial advice. Trading involves risk. Users are responsible for API-key permissions, configuration, order review, and all resulting gains or losses. Use Demo mode first. Never use an API key with withdrawal permission.
+## Release status
+
+Current version: `1.0.0`
+
+| Milestone | Version |
+| --- | --- |
+| Scaffold and naming correction | `0.1.0` |
+| Control panel and MCP host | `0.2.0` |
+| Credentials and read-only exchange connection | `0.3.0` |
+| Risk engine and order preparation | `0.4.0` |
+| Demo execution | `0.5.0` |
+| Live safety | `0.6.0` |
+| Production-ready open-source release | `1.0.0` |
+
+Release maintainers should follow [the release procedure](docs/RELEASE.md). Automated real-Live write tests are prohibited.
+
+## License and disclaimer
+
+TradeRelay is licensed under the [MIT License](LICENSE).
+
+Trading involves substantial risk. Software defects, network failures, exchange behavior, slippage, gaps, liquidation, fees, funding, and operator error can cause loss. You remain responsible for API-key permissions, configuration, order review, exchange state, and all resulting gains or losses.

@@ -27,6 +27,7 @@ internal sealed class LocalMcpServerHost(
     OrderExecutionService orderExecutionService,
     TradingControlService tradingControl,
     AuditLogService auditLog,
+    SafeLogService safeLog,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -39,7 +40,23 @@ internal sealed class LocalMcpServerHost(
 
     public McpServerSnapshot Snapshot => Volatile.Read(ref _snapshot);
 
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (settings.Server.StartAutomatically)
+        {
+            await StartServerAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public bool CanUpdateConfiguredPort => Snapshot.State is McpServerState.Stopped or McpServerState.Faulted;
+
+    public bool TryUpdateConfiguredPort(int port)
+    {
+        if (port is < 1024 or > 65535 || !CanUpdateConfiguredPort) return false;
+        settings.Server.Port = port;
+        SetSnapshot(CreateInitialSnapshot(port));
+        return true;
+    }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -89,6 +106,13 @@ internal sealed class LocalMcpServerHost(
                 logger.LogInformation(
                     "Local MCP server started on loopback port {Port}",
                     endpoint.Port);
+                await safeLog.TryWriteAsync(
+                    SafeLogLevel.Information,
+                    "MCP_STARTED",
+                    "mcp.lifecycle",
+                    "The local MCP server started on loopback.",
+                    new Dictionary<string, string> { ["port"] = endpoint.Port.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
                 await auditLog.TryWriteAsync(auditLog.Create("system", "mcp_started", "OK", settings.Bybit.Environment, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -107,6 +131,15 @@ internal sealed class LocalMcpServerHost(
                     exception,
                     "Local MCP server failed to start on loopback port {Port}",
                     settings.Server.Port);
+
+                await safeLog.TryWriteAsync(
+                    SafeLogLevel.Error,
+                    "MCP_START_FAILED",
+                    "mcp.lifecycle",
+                    "The local MCP server could not be started.",
+                    new Dictionary<string, string> { ["port"] = settings.Server.Port.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                    exception,
+                    CancellationToken.None).ConfigureAwait(false);
 
                 SetSnapshot(Snapshot with
                 {
@@ -163,6 +196,7 @@ internal sealed class LocalMcpServerHost(
             });
 
             logger.LogInformation("Local MCP server stopped");
+            await safeLog.TryWriteAsync(SafeLogLevel.Information, "MCP_STOPPED", "mcp.lifecycle", "The local MCP server stopped.", cancellationToken: cancellationToken).ConfigureAwait(false);
             await auditLog.TryWriteAsync(auditLog.Create("system", "mcp_stopped", "OK", settings.Bybit.Environment, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -176,6 +210,7 @@ internal sealed class LocalMcpServerHost(
         catch (Exception exception)
         {
             logger.LogError(exception, "Local MCP server failed while stopping");
+            await safeLog.TryWriteAsync(SafeLogLevel.Error, "MCP_STOP_FAILED", "mcp.lifecycle", "The local MCP server could not be stopped cleanly.", exception: exception, cancellationToken: CancellationToken.None).ConfigureAwait(false);
             SetSnapshot(Snapshot with
             {
                 State = McpServerState.Faulted,

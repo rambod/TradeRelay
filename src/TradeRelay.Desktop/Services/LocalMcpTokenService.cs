@@ -16,6 +16,8 @@ internal sealed class LocalMcpTokenService(IProtectedSecretStore protectedStore,
 
     internal LocalMcpTokenService() : this(new SessionProtectedSecretStore(), NullLogger<LocalMcpTokenService>.Instance) { }
 
+    public event EventHandler? TokenRotated;
+
     public string CurrentToken => Volatile.Read(ref _currentToken);
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -39,6 +41,7 @@ internal sealed class LocalMcpTokenService(IProtectedSecretStore protectedStore,
     {
         string token = GenerateToken();
         Interlocked.Exchange(ref _currentToken, token);
+        try { TokenRotated?.Invoke(this, EventArgs.Empty); } catch { }
         return token;
     }
 

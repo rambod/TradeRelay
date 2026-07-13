@@ -36,6 +36,7 @@ internal static class Program
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.AddSingleton<ApplicationDataPaths>();
+        builder.Services.AddSingleton<SensitiveDataRedactor>();
         builder.Services.AddSingleton<ApplicationSettingsStore>();
         builder.Services.AddSingleton(services => services.GetRequiredService<ApplicationSettingsStore>().Load());
         builder.Services.AddSingleton(TimeProvider.System);
@@ -60,6 +61,8 @@ internal static class Program
         builder.Services.AddSingleton<PreparedOrderStore>();
         builder.Services.AddSingleton<LiveActionConfirmationStore>();
         builder.Services.AddSingleton<OrderPreparationService>();
+        builder.Services.AddSingleton<SafeLogService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<SafeLogService>());
         builder.Services.AddSingleton<AuditLogService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<AuditLogService>());
         builder.Services.AddSingleton<TradingControlService>();
@@ -74,10 +77,13 @@ internal static class Program
             services.GetRequiredService<LocalMcpServerHost>());
         builder.Services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
         builder.Services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
+        builder.Services.AddSingleton<IDesktopShellService, DesktopShellService>();
+        builder.Services.AddSingleton<IDiagnosticsExporter, DiagnosticsExporter>();
         builder.Services.AddSingleton<App>();
         builder.Services.AddSingleton<RiskViewModel>();
         builder.Services.AddSingleton<ApprovalsViewModel>();
         builder.Services.AddSingleton<ActivityViewModel>();
+        builder.Services.AddSingleton<SettingsViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));

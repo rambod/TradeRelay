@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Locked restore
+        run: dotnet restore --locked-mode
+      - name: Release build
+        run: dotnet build --configuration Release --no-restore
+      - name: Tests
+        run: dotnet test --configuration Release --no-build --logger trx --results-directory TestResults
+      - name: Formatting
+        run: dotnet format --no-restore --verify-no-changes
+      - name: Secret scan
+        run: eng/scan-secrets.sh
+      - name: Trading write-path scan
+        run: eng/scan-safety.sh
+      - name: Vulnerability audit
+        run: dotnet list TradeRelay.sln package --vulnerable --include-transitive --format json > artifacts-vulnerabilities.json
+      - name: Upload test results after failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low

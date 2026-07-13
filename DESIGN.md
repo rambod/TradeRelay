@@ -30,6 +30,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Default window: 1080×720; minimum supported window: 900×640.
 - Use split list/detail layouts for review workflows and grouped forms for settings.
 - Use a reverse-chronological Activity list with inline technical details for execution and audit history.
+- Use a focused Settings form for MCP lifecycle, application paths, diagnostics, and release identity.
 - Avoid nested cards; borders define only genuine panels or grouped workflows.
 
 ## Components
@@ -43,6 +44,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Live enablement uses one focused confirmation dialog with the complete risk summary and an exact typed phrase.
 - Destructive Live action confirmations share the compact Approvals list/detail pattern rather than introducing another page.
 - Validation messages sit directly below the affected group and use actionable language.
+- Production loading, empty, and failure states explain the next safe operator action and never disappear silently.
 
 ## Motion
 

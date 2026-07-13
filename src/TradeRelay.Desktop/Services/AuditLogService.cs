@@ -1,13 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
 using TradeRelay.Core.Models;
 
 namespace TradeRelay.Desktop.Services;
 
-internal sealed partial class AuditLogService(ApplicationDataPaths paths, TimeProvider timeProvider) : IHostedService
+internal sealed class AuditLogService(ApplicationDataPaths paths, TimeProvider timeProvider, SensitiveDataRedactor redactor) : IHostedService
 {
     private const int SessionLimit = 500;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -90,14 +89,10 @@ internal sealed partial class AuditLogService(ApplicationDataPaths paths, TimePr
 
     private void SetHealth(AuditHealthSnapshot health) { Volatile.Write(ref _health, health); HealthChanged?.Invoke(this, health); }
 
-    private static AuditEvent Sanitize(AuditEvent item) => item with
+    private AuditEvent Sanitize(AuditEvent item) => item with
     {
-        ProviderResult = Redact(item.ProviderResult),
-        RiskSummary = Redact(item.RiskSummary),
-        ErrorCode = Redact(item.ErrorCode)
+        ProviderResult = redactor.Redact(item.ProviderResult),
+        RiskSummary = redactor.Redact(item.RiskSummary),
+        ErrorCode = redactor.Redact(item.ErrorCode)
     };
-
-    private static string? Redact(string? value) => value is null ? null : SensitiveValuePattern().Replace(value, "$1=[REDACTED]");
-    [GeneratedRegex("(?i)\\b(api[-_ ]?key|secret|token|authorization|signature|password|private|credential)\\s*[:=]\\s*[^\\s;,]+", RegexOptions.CultureInvariant)]
-    private static partial Regex SensitiveValuePattern();
 }

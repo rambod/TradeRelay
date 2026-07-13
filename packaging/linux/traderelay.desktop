@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=TradeRelay
+Comment=Safety-first local MCP control panel for Bybit
+Exec=TradeRelay/launch-traderelay
+Icon=traderelay
+Terminal=false
+Categories=Office;Finance;
+StartupWMClass=TradeRelay

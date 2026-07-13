@@ -8,6 +8,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>..\..\assets\icons\TradeRelay.ico</ApplicationIcon>
+    <RuntimeIdentifiers>osx-arm64;osx-x64;win-arm64;win-x64;linux-arm64;linux-x64</RuntimeIdentifiers>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +21,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +31,10 @@
   <ItemGroup>
     <ProjectReference Include="..\TradeRelay.Core\TradeRelay.Core.csproj" />
     <ProjectReference Include="..\TradeRelay.Providers.Bybit\TradeRelay.Providers.Bybit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\TradeRelay.png" />
   </ItemGroup>
 
 </Project>

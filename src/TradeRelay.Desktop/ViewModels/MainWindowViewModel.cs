@@ -35,6 +35,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _isRiskSelected;
     [ObservableProperty] private bool _isApprovalsSelected;
     [ObservableProperty] private bool _isActivitySelected;
+    [ObservableProperty] private bool _isSettingsSelected;
     [ObservableProperty] private bool _tradingAcknowledged;
     [ObservableProperty] private bool _isLiveEnableDialogOpen;
     [ObservableProperty] private string _liveConfirmationText = string.Empty;
@@ -65,6 +66,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         RiskViewModel risk,
         ApprovalsViewModel approvals,
         ActivityViewModel activity,
+        SettingsViewModel settingsViewModel,
         TradingControlService tradingControl,
         AuditLogService auditLog,
         ApplicationMetadata metadata,
@@ -91,6 +93,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _selectedEnvironment = settings.Bybit.Environment;
         _rememberCredentials = settings.Bybit.RememberCredentials;
         _serverHost.StateChanged += OnServerStateChanged;
+        _tokenService.TokenRotated += OnTokenRotated;
         _connectionManager.StateChanged += OnProviderStateChanged;
         _preparedOrderStore.Changed += OnPreparedOrderChanged;
         _liveConfirmations.Changed += OnLiveConfirmationChanged;
@@ -98,6 +101,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         Risk = risk;
         Approvals = approvals;
         Activity = activity;
+        Settings = settingsViewModel;
     }
 
     /// <summary>
@@ -118,11 +122,12 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current development milestone label.
     /// </summary>
-    public string DevelopmentStatus => "Milestone 6 · Session-gated Bybit Demo and Live execution";
+    public string DevelopmentStatus => "Production-ready local Bybit control panel";
 
     public RiskViewModel Risk { get; }
     public ApprovalsViewModel Approvals { get; }
     public ActivityViewModel Activity { get; }
+    public SettingsViewModel Settings { get; }
 
     public IReadOnlyList<TradingEnvironment> Environments { get; } = Enum.GetValues<TradingEnvironment>();
 
@@ -265,6 +270,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private void ShowActivity() => SelectPage(activity: true);
 
     [RelayCommand]
+    private void ShowSettings() => SelectPage(settings: true);
+
+    [RelayCommand]
     private async Task EnableDemoTradingAsync(CancellationToken cancellationToken)
     {
         if (!_auditLog.Health.Healthy) { ShowActionMessage("Activity auditing is unavailable; Demo trading cannot be enabled."); return; }
@@ -398,12 +406,14 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     public void Dispose()
     {
         _serverHost.StateChanged -= OnServerStateChanged;
+        _tokenService.TokenRotated -= OnTokenRotated;
         _connectionManager.StateChanged -= OnProviderStateChanged;
         _preparedOrderStore.Changed -= OnPreparedOrderChanged;
         _liveConfirmations.Changed -= OnLiveConfirmationChanged;
         _tradingControl.StateChanged -= OnTradingStateChanged;
         Approvals.Dispose();
         Activity.Dispose();
+        Settings.Dispose();
         CancellationTokenSource? cancellation = Interlocked.Exchange(ref _messageClearCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
@@ -435,6 +445,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private void OnServerStateChanged(object? sender, McpServerSnapshot snapshot) =>
         _uiDispatcher.Post(() => ApplyServerSnapshot(snapshot));
 
+    private void OnTokenRotated(object? sender, EventArgs eventArgs) =>
+        _uiDispatcher.Post(() => OnPropertyChanged(nameof(DisplayedToken)));
+
     private void OnProviderStateChanged(object? sender, ProviderConnectionSnapshot snapshot) =>
         _uiDispatcher.Post(() => ApplyProviderSnapshot(snapshot));
 
@@ -446,13 +459,14 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private void OnTradingStateChanged(object? sender, TradingSessionSnapshot snapshot) => _uiDispatcher.Post(NotifyTradingState);
 
-    private void SelectPage(bool dashboard = false, bool credentials = false, bool risk = false, bool approvals = false, bool activity = false)
+    private void SelectPage(bool dashboard = false, bool credentials = false, bool risk = false, bool approvals = false, bool activity = false, bool settings = false)
     {
         IsDashboardSelected = dashboard;
         IsCredentialsSelected = credentials;
         IsRiskSelected = risk;
         IsApprovalsSelected = approvals;
         IsActivitySelected = activity;
+        IsSettingsSelected = settings;
     }
 
     private void NotifyTradingState()

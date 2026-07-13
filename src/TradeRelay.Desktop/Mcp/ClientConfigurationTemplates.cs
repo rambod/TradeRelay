@@ -15,5 +15,5 @@ internal static class ClientConfigurationTemplates
 
     public static string CreateClaudeCodeCommand(string endpoint) =>
         $"claude mcp add --transport http traderelay {endpoint} " +
-        "--header \"Authorization: Bearer ${TRADERELAY_MCP_TOKEN}\"";
+        "--header 'Authorization: Bearer ${TRADERELAY_MCP_TOKEN}'";
 }

@@ -12,6 +12,8 @@ Developers and technical operators running a local MCP bridge who need to inspec
 
 TradeRelay makes local exchange access observable and controllable. Success means users can understand the current safety posture, validate risk, review exactly what an MCP client proposes, and trace every explicitly enabled Demo or Live write through reconciliation.
 
+Version 1.0 adds production operations without expanding the trading boundary: users can configure local MCP startup, inspect safe runtime state, export non-secret diagnostics, verify signed or unsigned portable packages, and report security issues privately.
+
 ## Brand Personality
 
 Calm, precise, protective. The product should communicate expert confidence without trading hype, alarm fatigue, or decorative complexity.
@@ -30,6 +32,7 @@ Calm, precise, protective. The product should communicate expert confidence with
 3. Keep human decisions visibly separate from MCP requests.
 4. Prefer familiar desktop controls and compact information hierarchy over novelty.
 5. State uncertainty explicitly; never manufacture precision for unknown risk.
+6. Diagnostics help operators without exporting secrets, raw audit entries, or authenticated payloads.
 
 ## Accessibility & Inclusion
 

@@ -10,6 +10,7 @@
     Height="720"
     MinWidth="900"
     MinHeight="640"
+    Icon="avares://TradeRelay/Assets/TradeRelay.png"
     Background="{DynamicResource AppBackgroundBrush}">
   <Grid RowDefinitions="Auto,Auto,*">
     <Border
@@ -72,6 +73,7 @@
         <Button Classes="quiet" Command="{Binding ShowRiskCommand}" Content="Risk" />
         <Button Classes="quiet" Command="{Binding ShowApprovalsCommand}" Content="Approvals" />
         <Button Classes="quiet" Command="{Binding ShowActivityCommand}" Content="Activity" />
+        <Button Classes="quiet" Command="{Binding ShowSettingsCommand}" Content="Settings" />
       </StackPanel>
     </Border>
 
@@ -305,6 +307,9 @@
     </Grid>
     <Grid Grid.Row="2" IsVisible="{Binding IsActivitySelected}">
       <localViews:ActivityView DataContext="{Binding Activity}" />
+    </Grid>
+    <Grid Grid.Row="2" IsVisible="{Binding IsSettingsSelected}">
+      <localViews:SettingsView DataContext="{Binding Settings}" />
     </Grid>
 
     <Grid Grid.RowSpan="3" Background="#E60B1118" IsVisible="{Binding IsLiveEnableDialogOpen}">

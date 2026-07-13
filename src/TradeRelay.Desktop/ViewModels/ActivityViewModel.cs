@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TradeRelay.Core.Models;
@@ -11,6 +10,7 @@ internal sealed partial class ActivityViewModel : ObservableObject, IDisposable
 {
     private readonly AuditLogService _audit;
     private readonly IUiDispatcher _dispatcher;
+    private readonly IDesktopShellService _shell;
     private IReadOnlyList<AuditEvent> _all = [];
 
     [ObservableProperty] private string _environmentFilter = "All";
@@ -21,9 +21,9 @@ internal sealed partial class ActivityViewModel : ObservableObject, IDisposable
     [ObservableProperty] private AuditEvent? _selectedEvent;
     [ObservableProperty] private string? _warning;
 
-    public ActivityViewModel(AuditLogService audit, IUiDispatcher dispatcher)
+    public ActivityViewModel(AuditLogService audit, IUiDispatcher dispatcher, IDesktopShellService shell)
     {
-        _audit = audit; _dispatcher = dispatcher; _audit.EventWritten += OnEventWritten;
+        _audit = audit; _dispatcher = dispatcher; _shell = shell; _audit.EventWritten += OnEventWritten;
         _ = RefreshAsync();
     }
 
@@ -56,8 +56,7 @@ internal sealed partial class ActivityViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenAuditFolder()
     {
-        Directory.CreateDirectory(_audit.DirectoryPath);
-        Process.Start(new ProcessStartInfo { FileName = _audit.DirectoryPath, UseShellExecute = true });
+        if (!_shell.TryOpenFolder(_audit.DirectoryPath, out string? error)) Warning = error;
     }
 
     public void Dispose() => _audit.EventWritten -= OnEventWritten;
@@ -75,4 +74,3 @@ internal sealed partial class ActivityViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsEmpty));
     }
 }
-

@@ -1,0 +1,31 @@
+name: Bybit Demo Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_demo_write:
+        description: Run the smallest non-marketable Demo order test and cancel it
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: bybit-demo
+    env:
+      TRADERELAY_BYBIT_DEMO_API_KEY: ${{ secrets.TRADERELAY_BYBIT_DEMO_API_KEY }}
+      TRADERELAY_BYBIT_DEMO_API_SECRET: ${{ secrets.TRADERELAY_BYBIT_DEMO_API_SECRET }}
+      TRADERELAY_RUN_DEMO_TRADING_TESTS: ${{ inputs.enable_demo_write && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - name: Run opted-in Demo tests
+        run: dotnet test --configuration Release --no-restore --filter 'Category=BybitDemoIntegration|Category=BybitDemoTradingIntegration'
