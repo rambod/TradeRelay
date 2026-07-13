@@ -22,10 +22,7 @@ internal sealed partial class AuditLogService(ApplicationDataPaths paths, TimePr
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await TryWriteAsync(Create("system", "shutdown", "OK", TradingEnvironment.Demo, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
-    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public async Task WriteRequiredAsync(AuditEvent auditEvent, CancellationToken cancellationToken)
     {

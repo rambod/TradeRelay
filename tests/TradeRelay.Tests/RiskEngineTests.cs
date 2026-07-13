@@ -135,6 +135,29 @@ public sealed class RiskEngineTests
         Assert.NotEmpty(result.Warnings);
     }
 
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(0.5, true)]
+    [InlineData(10, true)]
+    [InlineData(10.01, false)]
+    public void LiveMarketPriceDeviation_IsValidated(decimal deviation, bool expectedValid)
+    {
+        RiskSettings source = Settings();
+        var settings = new RiskSettings
+        {
+            AllowedSymbols = new(source.AllowedSymbols, StringComparer.Ordinal),
+            MaxRiskPerTradePercent = source.MaxRiskPerTradePercent,
+            MaxOrderNotionalUsd = source.MaxOrderNotionalUsd,
+            MaxOpenPositions = source.MaxOpenPositions,
+            MaxLeverage = source.MaxLeverage,
+            MaxMarketPriceDeviationPercent = deviation,
+            RequireStopLoss = source.RequireStopLoss,
+            PreparedOrderExpirySeconds = source.PreparedOrderExpirySeconds
+        };
+
+        Assert.Equal(expectedValid, _engine.ValidateSettings(settings).Valid);
+    }
+
     private OrderValidationResult Validate(PrepareOrderRequest request, RiskSettings? settings = null, InstrumentInfo? instrument = null, AccountSummary? account = null) =>
         _engine.ValidateOrder(request, settings ?? Settings(), instrument ?? Instrument(), Ticker(), account ?? Account(), 0, Credential());
 
@@ -142,7 +165,7 @@ public sealed class RiskEngineTests
         new("request-1", symbol, side, type, quantity, type == OrderType.Limit ? limit : null, stop, takeProfit, leverage, null);
 
     private static RiskSettings Settings() => new() { AllowedSymbols = new(["BTCUSDT"], StringComparer.Ordinal), MaxRiskPerTradePercent = 5m, MaxOrderNotionalUsd = 1000m, MaxOpenPositions = 2, MaxLeverage = 5m, PreparedOrderExpirySeconds = 120 };
-    private static RiskSettings Copy(RiskSettings source, decimal? maxNotional = null, decimal? maxLeverage = null, int? maxPositions = null, bool? requireStopLoss = null) => new() { AllowedSymbols = new(source.AllowedSymbols, StringComparer.Ordinal), MaxRiskPerTradePercent = source.MaxRiskPerTradePercent, MaxOrderNotionalUsd = maxNotional ?? source.MaxOrderNotionalUsd, MaxOpenPositions = maxPositions ?? source.MaxOpenPositions, MaxLeverage = maxLeverage ?? source.MaxLeverage, RequireStopLoss = requireStopLoss ?? source.RequireStopLoss, RequireManualApprovalForDemo = source.RequireManualApprovalForDemo, RequireManualApprovalForLive = source.RequireManualApprovalForLive, PreparedOrderExpirySeconds = source.PreparedOrderExpirySeconds };
+    private static RiskSettings Copy(RiskSettings source, decimal? maxNotional = null, decimal? maxLeverage = null, int? maxPositions = null, bool? requireStopLoss = null) => new() { AllowedSymbols = new(source.AllowedSymbols, StringComparer.Ordinal), MaxRiskPerTradePercent = source.MaxRiskPerTradePercent, MaxOrderNotionalUsd = maxNotional ?? source.MaxOrderNotionalUsd, MaxOpenPositions = maxPositions ?? source.MaxOpenPositions, MaxLeverage = maxLeverage ?? source.MaxLeverage, MaxMarketPriceDeviationPercent = source.MaxMarketPriceDeviationPercent, RequireStopLoss = requireStopLoss ?? source.RequireStopLoss, RequireManualApprovalForDemo = source.RequireManualApprovalForDemo, RequireManualApprovalForLive = source.RequireManualApprovalForLive, PreparedOrderExpirySeconds = source.PreparedOrderExpirySeconds };
     private static InstrumentInfo Instrument(decimal minimumQuantity = .01m, decimal maximumMarketQuantity = 50m, decimal? minimumNotional = 1m) => new("BTCUSDT", "Trading", .1m, .01m, minimumQuantity, 100m, maximumMarketQuantity, minimumNotional, 100m, "LinearPerpetual");
     private static TickerSnapshot Ticker() => new("BTCUSDT", 100m, 99m, 101m, 110m, 90m, 1000m, DateTimeOffset.UtcNow);
     private static AccountSummary Account(decimal equity = 1000m) => new(equity, equity, 0m, 0m, TradingEnvironment.Demo, DateTimeOffset.UtcNow);

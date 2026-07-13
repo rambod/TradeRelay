@@ -45,7 +45,7 @@ internal sealed class RiskTools(
     }
 
     [McpServerTool(Name = "prepare_order", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
-    [Description("Creates an expiring immutable local plan. This tool does not place an order; execution is a separate gated Demo operation.")]
+    [Description("Creates an expiring immutable local plan. This tool does not place an order; execution is a separate environment-aware gated operation.")]
     public async Task<ToolResult<PreparedOrderResult>> PrepareOrderAsync(string clientRequestId, string symbol, string side, string orderType, decimal quantity, decimal? limitPrice = null, decimal? stopLoss = null, decimal? takeProfit = null, decimal? requestedLeverage = null, string? userNote = null, CancellationToken cancellationToken = default)
     {
         string correlationId = ToolResponse.NewCorrelationId();
@@ -60,7 +60,7 @@ internal sealed class RiskTools(
     }
 
     [McpServerTool(Name = "get_prepared_order", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Gets one immutable prepared plan and its current approval or Demo execution state by preparation ID.")]
+    [Description("Gets one immutable prepared plan and its current approval or execution state by preparation ID.")]
     public ToolResult<PreparedOrder> GetPreparedOrder(string preparationId)
     {
         if (!Guid.TryParse(preparationId, out Guid id)) return ToolResponse.Failure<PreparedOrder>("VALIDATION_FAILED", "preparationId is invalid.", settings.Bybit.Environment, timeProvider);

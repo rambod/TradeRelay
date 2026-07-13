@@ -20,7 +20,8 @@
               <StackPanel Grid.Column="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum notional (USD)" /><TextBox Text="{Binding MaxNotionalUsd, Mode=TwoWay}" /></StackPanel>
               <StackPanel Grid.Row="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum open positions" /><TextBox Text="{Binding MaxOpenPositions, Mode=TwoWay}" /></StackPanel>
               <StackPanel Grid.Row="1" Grid.Column="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Maximum leverage" /><TextBox Text="{Binding MaxLeverage, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Row="2" Spacing="6"><TextBlock Classes="fieldLabel" Text="Prepared-plan expiry (seconds)" /><TextBox Text="{Binding ExpirySeconds, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Row="2" Spacing="6"><TextBlock Classes="fieldLabel" Text="Live market-price deviation (%)" /><TextBox Text="{Binding MaxMarketPriceDeviationPercent, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Row="2" Grid.Column="1" Spacing="6"><TextBlock Classes="fieldLabel" Text="Prepared-plan expiry (seconds)" /><TextBox Text="{Binding ExpirySeconds, Mode=TwoWay}" /></StackPanel>
             </Grid>
             <Separator />
             <CheckBox Content="Require stop loss" IsChecked="{Binding RequireStopLoss, Mode=TwoWay}" />

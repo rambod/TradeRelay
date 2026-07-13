@@ -88,6 +88,11 @@ public sealed class RiskSettings
     public decimal MaxLeverage { get; init; } = 3m;
 
     /// <summary>
+    /// Gets the maximum absolute market-price movement permitted between Live preparation and execution.
+    /// </summary>
+    public decimal MaxMarketPriceDeviationPercent { get; init; } = 0.50m;
+
+    /// <summary>
     /// Gets a value indicating whether prepared orders require a stop loss.
     /// </summary>
     public bool RequireStopLoss { get; init; } = true;

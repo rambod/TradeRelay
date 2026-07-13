@@ -39,6 +39,9 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Every interactive control has default, hover, focus, disabled, and loading states.
 - Focus uses a clearly visible 2px cyan outline.
 - Status badges include text and restrained semantic backgrounds; color is never the sole signal.
+- Live selection always displays a persistent textual red indicator with the current enabled or disabled state.
+- Live enablement uses one focused confirmation dialog with the complete risk summary and an exact typed phrase.
+- Destructive Live action confirmations share the compact Approvals list/detail pattern rather than introducing another page.
 - Validation messages sit directly below the affected group and use actionable language.
 
 ## Motion

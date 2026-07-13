@@ -5,15 +5,19 @@
     xmlns:viewModels="using:TradeRelay.Desktop.ViewModels"
     xmlns:core="using:TradeRelay.Core.Models"
     x:DataType="viewModels:ApprovalsViewModel">
-  <Grid Margin="32,24" RowDefinitions="Auto,*" RowSpacing="18">
+  <Grid Margin="32,24" RowDefinitions="Auto,Auto,*" RowSpacing="14">
     <Grid ColumnDefinitions="*,Auto">
       <StackPanel Spacing="5">
         <TextBlock Classes="sectionTitle" Text="Prepared plans" />
-        <TextBlock Classes="muted" Text="Human approval records intent. Approved Demo plans can execute only through MCP after session enablement." />
+        <TextBlock Classes="muted" Text="Human approval records intent. Prepared plans and destructive Live actions execute only through separately gated MCP calls." />
       </StackPanel>
       <Border Grid.Column="1" Classes="infoBadge" Padding="10,6"><TextBlock Text="MCP EXECUTION ONLY" /></Border>
     </Grid>
-    <Grid Grid.Row="1" ColumnDefinitions="2*,3*" ColumnSpacing="18">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+      <Button Classes="quiet" Command="{Binding ShowPlansCommand}" Content="Prepared plans" />
+      <Button Classes="quiet" Command="{Binding ShowLiveActionsCommand}" Content="Live action confirmations" />
+    </StackPanel>
+    <Grid Grid.Row="2" ColumnDefinitions="2*,3*" ColumnSpacing="18" IsVisible="{Binding IsPlansSelected}">
       <Border Classes="panel" Padding="0">
         <Grid RowDefinitions="Auto,*">
           <TextBlock Margin="16,14" FontWeight="SemiBold" Text="Session plans" />
@@ -69,6 +73,60 @@
           <TextBlock HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Text="No plans in this session" />
           <TextBlock Classes="muted" Text="An MCP client can call prepare_order to create an expiring local plan. Invalid requests are never stored, and execution remains separately gated." TextAlignment="Center" TextWrapping="Wrap" />
         </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+    <Grid Grid.Row="2" ColumnDefinitions="2*,3*" ColumnSpacing="18" IsVisible="{Binding IsLiveActionsSelected}">
+      <Border Classes="panel" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Margin="16,14" FontWeight="SemiBold" Text="Session Live actions" />
+          <ListBox Grid.Row="1" ItemsSource="{Binding LiveActions}" SelectedItem="{Binding SelectedLiveAction, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="core:LiveActionConfirmation">
+                <Grid Margin="8,7" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                  <TextBlock FontWeight="SemiBold" Text="{Binding Request.Action}" />
+                  <TextBlock Grid.Column="1" Classes="value" Text="{Binding State}" />
+                  <TextBlock Grid.Row="1" Classes="muted" Text="{Binding Request.Symbol}" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Classes="warningText" Text="LIVE" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+      <Border Grid.Column="1" Classes="panel" Padding="22">
+        <Grid>
+          <Grid RowDefinitions="Auto,*" IsVisible="{Binding HasLiveActionSelection}">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="4">
+                <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding SelectedLiveActionTitle}" />
+                <TextBlock Classes="warningText" FontWeight="SemiBold" Text="LIVE · DESTRUCTIVE ACTION" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="3">
+                <TextBlock Classes="value" Text="{Binding SelectedLiveActionState}" />
+                <TextBlock Classes="muted" Text="{Binding SelectedLiveActionExpiry}" />
+              </StackPanel>
+            </Grid>
+            <ScrollViewer Grid.Row="1" Margin="0,18,0,0">
+              <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Approved scope" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedLiveActionScope}" TextWrapping="Wrap" /></Grid>
+                <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Request snapshot" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SelectedLiveActionSnapshot}" TextWrapping="Wrap" /></Grid>
+                <Grid ColumnDefinitions="150,*"><TextBlock Classes="muted" Text="Result" /><TextBlock Grid.Column="1" Text="{Binding SelectedLiveActionResult}" TextWrapping="Wrap" /></Grid>
+                <Separator />
+                <TextBlock FontWeight="SemiBold" Text="Immutable identifiers" />
+                <TextBlock Classes="mono" Text="{Binding SelectedLiveActionIds}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="danger" Command="{Binding ApproveLiveActionCommand}" Content="Approve Live action" />
+                  <Button Classes="quiet" Command="{Binding RejectLiveActionCommand}" Content="Reject" />
+                </StackPanel>
+                <TextBlock Classes="statusText" Text="{Binding ActionMessage}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460" Spacing="10" IsVisible="{Binding LiveActionsEmpty}">
+            <TextBlock HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Text="No Live actions awaiting review" />
+            <TextBlock Classes="muted" Text="A Live cancel-all or close-position MCP request creates a 60-second immutable confirmation here before any exchange write can occur." TextAlignment="Center" TextWrapping="Wrap" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

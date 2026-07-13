@@ -35,7 +35,7 @@ public sealed class RiskAndApprovalsViewModelTests
     public void ApprovalsViewModel_TracksApprovesAndNeverDisplaysSecrets()
     {
         var store = new PreparedOrderStore(TimeProvider.System);
-        var viewModel = new ApprovalsViewModel(store, new ImmediateDispatcher(), TimeProvider.System);
+        var viewModel = new ApprovalsViewModel(store, new LiveActionConfirmationStore(TimeProvider.System), new ImmediateDispatcher(), TimeProvider.System);
         try
         {
             PreparedOrderResult added = store.Add("ui-request", Validation(), TradingEnvironment.Live, new RiskSettingsSnapshot(["BTCUSDT"], 1m, 500m, 2, 3m, true, true, 120));
@@ -57,11 +57,30 @@ public sealed class RiskAndApprovalsViewModelTests
     {
         var viewModel = new ApprovalsViewModel(
             new PreparedOrderStore(TimeProvider.System),
+            new LiveActionConfirmationStore(TimeProvider.System),
             new ImmediateDispatcher(),
             TimeProvider.System);
 
         viewModel.Dispose();
         viewModel.Dispose();
+    }
+
+    [Fact]
+    public void ApprovalsViewModel_ApprovesLiveActionWithoutExposingSecrets()
+    {
+        var liveStore = new LiveActionConfirmationStore(TimeProvider.System);
+        using var viewModel = new ApprovalsViewModel(new PreparedOrderStore(TimeProvider.System), liveStore, new ImmediateDispatcher(), TimeProvider.System);
+        LiveActionConfirmationResult added = liveStore.Add("ui-live-action", new(LiveActionType.CancelAllOrders, null, null, "All active USDT-linear orders", 3), Guid.NewGuid(), Guid.NewGuid());
+
+        viewModel.ShowLiveActionsCommand.Execute(null);
+        Assert.False(viewModel.LiveActionsEmpty);
+        Assert.True(viewModel.ApproveLiveActionCommand.CanExecute(null));
+        Assert.DoesNotContain("secret", viewModel.SelectedLiveActionIds, StringComparison.OrdinalIgnoreCase);
+
+        viewModel.ApproveLiveActionCommand.Execute(null);
+        Assert.Equal(LiveActionConfirmationState.Approved.ToString(), viewModel.SelectedLiveActionState);
+        Assert.False(viewModel.ApproveLiveActionCommand.CanExecute(null));
+        Assert.NotNull(added.Confirmation);
     }
 
     private static OrderValidationResult Validation()

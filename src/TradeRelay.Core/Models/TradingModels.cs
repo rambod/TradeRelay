@@ -3,6 +3,9 @@ namespace TradeRelay.Core.Models;
 /// <summary>Identifies an exchange write action evaluated by the trading gate.</summary>
 public enum TradingAction { ExecutePreparedOrder, CancelOrder, CancelAllOrders, ClosePosition, SetTradingStop }
 
+/// <summary>Identifies the session-only trading-control state.</summary>
+public enum TradingSessionState { Disabled, Enabling, Enabled, EmergencyDisabled }
+
 /// <summary>Normalized exchange order state.</summary>
 public enum ExchangeOrderStatus { Pending, New, PartiallyFilled, Filled, Cancelled, Rejected, Unknown }
 
@@ -24,6 +27,13 @@ public sealed record TradingStopRequest(string Symbol, TradeSide PositionSide, d
 /// <summary>Reports a centralized trading-gate decision.</summary>
 public sealed record TradingGateResult(bool Allowed, string Code, string Message);
 
-/// <summary>Represents session-only Demo trading state.</summary>
-public sealed record TradingSessionSnapshot(bool Enabled, bool Ready, string StateLabel, string? LastError, DateTimeOffset TimestampUtc);
-
+/// <summary>Represents session-only exchange trading state.</summary>
+public sealed record TradingSessionSnapshot(
+    bool Enabled,
+    bool Ready,
+    string StateLabel,
+    string? LastError,
+    DateTimeOffset TimestampUtc,
+    TradingEnvironment Environment = TradingEnvironment.Demo,
+    TradingSessionState State = TradingSessionState.Disabled,
+    Guid? SessionId = null);

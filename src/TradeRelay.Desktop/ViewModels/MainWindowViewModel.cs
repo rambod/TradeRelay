@@ -23,6 +23,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private readonly IUiDispatcher _uiDispatcher;
     private readonly TimeProvider _timeProvider;
     private readonly PreparedOrderStore _preparedOrderStore;
+    private readonly LiveActionConfirmationStore _liveConfirmations;
     private readonly TradingControlService _tradingControl;
     private readonly AuditLogService _auditLog;
     private CancellationTokenSource? _messageClearCancellation;
@@ -35,6 +36,8 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _isApprovalsSelected;
     [ObservableProperty] private bool _isActivitySelected;
     [ObservableProperty] private bool _tradingAcknowledged;
+    [ObservableProperty] private bool _isLiveEnableDialogOpen;
+    [ObservableProperty] private string _liveConfirmationText = string.Empty;
     [ObservableProperty] private TradingEnvironment _selectedEnvironment;
     [ObservableProperty] private string _apiKey = string.Empty;
     [ObservableProperty] private string _apiSecret = string.Empty;
@@ -58,6 +61,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         LocalMcpTokenService tokenService,
         ExchangeConnectionManager connectionManager,
         PreparedOrderStore preparedOrderStore,
+        LiveActionConfirmationStore liveConfirmations,
         RiskViewModel risk,
         ApprovalsViewModel approvals,
         ActivityViewModel activity,
@@ -76,6 +80,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _uiDispatcher = uiDispatcher ?? throw new ArgumentNullException(nameof(uiDispatcher));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _preparedOrderStore = preparedOrderStore ?? throw new ArgumentNullException(nameof(preparedOrderStore));
+        _liveConfirmations = liveConfirmations ?? throw new ArgumentNullException(nameof(liveConfirmations));
         _tradingControl = tradingControl ?? throw new ArgumentNullException(nameof(tradingControl));
         _auditLog = auditLog ?? throw new ArgumentNullException(nameof(auditLog));
         ArgumentNullException.ThrowIfNull(metadata);
@@ -88,6 +93,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _serverHost.StateChanged += OnServerStateChanged;
         _connectionManager.StateChanged += OnProviderStateChanged;
         _preparedOrderStore.Changed += OnPreparedOrderChanged;
+        _liveConfirmations.Changed += OnLiveConfirmationChanged;
         _tradingControl.StateChanged += OnTradingStateChanged;
         Risk = risk;
         Approvals = approvals;
@@ -112,7 +118,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current development milestone label.
     /// </summary>
-    public string DevelopmentStatus => "Milestone 5 · Explicitly enabled Bybit Demo execution";
+    public string DevelopmentStatus => "Milestone 6 · Session-gated Bybit Demo and Live execution";
 
     public RiskViewModel Risk { get; }
     public ApprovalsViewModel Approvals { get; }
@@ -169,16 +175,25 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// </summary>
     public string AccessStatus => (_tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled).ToString();
 
-    public string DemoTradingState => _tradingControl.Snapshot.StateLabel;
-    public string DemoTradingDetail => _tradingControl.Snapshot.LastError ?? "Demo write tools are available for this session.";
-    public bool IsDemoTradingEnabled => _tradingControl.Snapshot.Enabled;
-    public bool IsDemoTradingDisabled => !_tradingControl.Snapshot.Enabled;
-    public string HeaderSafetyState => IsDemoTradingEnabled ? "Demo trading enabled" : "Demo trading disabled";
+    public string TradingState => _tradingControl.Snapshot.StateLabel;
+    public string TradingDetail => _tradingControl.Snapshot.LastError ?? $"{SelectedEnvironment} write tools are available for this session.";
+    public bool IsTradingEnabled => _tradingControl.Snapshot.Enabled;
+    public bool IsTradingDisabled => !_tradingControl.Snapshot.Enabled;
+    public bool IsDemoTradingEnabled => IsDemoEnvironment && IsTradingEnabled;
+    public bool IsDemoTradingDisabled => IsDemoEnvironment && IsTradingDisabled;
+    public bool IsLiveEnvironment => SelectedEnvironment == TradingEnvironment.Live;
+    public bool IsDemoEnvironment => SelectedEnvironment == TradingEnvironment.Demo;
+    public bool ShowDemoEnable => IsDemoEnvironment && IsTradingDisabled;
+    public bool ShowLiveEnable => IsLiveEnvironment && IsTradingDisabled;
+    public string EnvironmentBadge => IsLiveEnvironment ? "LIVE" : "DEMO";
+    public string HeaderSafetyState => $"{SelectedEnvironment.ToString().ToUpperInvariant()} · {(IsTradingEnabled ? "TRADING ENABLED" : "TRADING DISABLED")}";
+    public string LiveRiskSummary => $"Risk/trade {_settings.Risk.MaxRiskPerTradePercent}% · Notional ${_settings.Risk.MaxOrderNotionalUsd} · Positions {_settings.Risk.MaxOpenPositions} · Leverage {_settings.Risk.MaxLeverage}× · Market drift {_settings.Risk.MaxMarketPriceDeviationPercent}% · Manual approval {(_settings.Risk.RequireManualApprovalForLive ? "required" : "disabled by operator")}";
+    public string LiveEnableWarnings => _providerSnapshot.CredentialInfo?.Warnings.Count > 0 ? string.Join(Environment.NewLine, _providerSnapshot.CredentialInfo.Warnings.Select(item => $"• {item}")) : "No additional credential warnings reported.";
 
     /// <summary>
     /// Gets the live-trading session status.
     /// </summary>
-    public string LiveTradingStatus => "Disabled";
+    public string LiveTradingStatus => IsLiveEnvironment ? (IsTradingEnabled ? "Enabled for this session" : "Disabled") : "Not selected";
 
     /// <summary>
     /// Gets the selected provider status.
@@ -198,7 +213,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current pending-approval count.
     /// </summary>
-    public string PendingApprovalCount => _preparedOrderStore.GetPending().Count.ToString();
+    public string PendingApprovalCount => (_preparedOrderStore.GetPending().Count + _liveConfirmations.GetPending().Count).ToString();
 
     public string RestHealth => _providerSnapshot.RestHealth.ToString();
     public string StreamHealth => _providerSnapshot.StreamHealth.ToString();
@@ -226,8 +241,13 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     partial void OnSelectedEnvironmentChanged(TradingEnvironment value)
     {
+        IsLiveEnableDialogOpen = false;
+        LiveConfirmationText = string.Empty;
+        NotifyEnvironmentState();
         if (value != _connectionManager.Snapshot.Environment) _ = ChangeEnvironmentSafeAsync(value);
     }
+
+    partial void OnLiveConfirmationTextChanged(string value) => ConfirmLiveEnableCommand.NotifyCanExecuteChanged();
 
     [RelayCommand]
     private void ShowDashboard() => SelectPage(dashboard: true);
@@ -248,7 +268,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private async Task EnableDemoTradingAsync(CancellationToken cancellationToken)
     {
         if (!_auditLog.Health.Healthy) { ShowActionMessage("Activity auditing is unavailable; Demo trading cannot be enabled."); return; }
-        TradingGateResult result = await _tradingControl.EnableAsync(ServerSnapshot.State == McpServerState.Running, TradingAcknowledged, cancellationToken);
+        TradingGateResult result = await _tradingControl.EnableAsync(ServerSnapshot.State == McpServerState.Running, TradingAcknowledged, null, cancellationToken);
         if (result.Allowed)
         {
             bool audited = await _auditLog.TryWriteAsync(_auditLog.Create("desktop", "demo_trading_enabled", "OK", TradingEnvironment.Demo, ToolResponse.NewCorrelationId()), cancellationToken);
@@ -258,12 +278,44 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     }
 
     [RelayCommand]
-    private async Task DisableDemoTradingAsync(CancellationToken cancellationToken)
+    private void OpenLiveEnableDialog()
     {
-        _tradingControl.Disable("Demo trading was disabled by the desktop operator.");
-        await _auditLog.TryWriteAsync(_auditLog.Create("desktop", "demo_trading_disabled", "OK", TradingEnvironment.Demo, ToolResponse.NewCorrelationId()), cancellationToken);
+        LiveConfirmationText = string.Empty;
+        IsLiveEnableDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelLiveEnable()
+    {
+        LiveConfirmationText = string.Empty;
+        IsLiveEnableDialogOpen = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanConfirmLiveEnable))]
+    private async Task ConfirmLiveEnableAsync(CancellationToken cancellationToken)
+    {
+        TradingGateResult result = await _tradingControl.EnableAsync(ServerSnapshot.State == McpServerState.Running, false, LiveConfirmationText, cancellationToken);
+        if (result.Allowed)
+        {
+            bool audited = await _auditLog.TryWriteAsync(_auditLog.Create("desktop", "live_trading_enabled", "OK", TradingEnvironment.Live, ToolResponse.NewCorrelationId(), providerResult: LiveRiskSummary), cancellationToken);
+            if (!audited)
+            {
+                _tradingControl.Disable("Activity auditing failed; Live trading was disabled.", emergency: true);
+                result = new(false, "AUDIT_UNAVAILABLE", "Activity auditing failed; Live trading was disabled.");
+            }
+        }
+        if (result.Allowed) CancelLiveEnable();
+        ShowActionMessage(result.Message);
+    }
+
+    [RelayCommand]
+    private async Task DisableTradingAsync(CancellationToken cancellationToken)
+    {
+        TradingEnvironment environment = SelectedEnvironment;
+        _tradingControl.Disable($"{environment} trading was disabled by the desktop operator.", emergency: true);
+        await _auditLog.TryWriteAsync(_auditLog.Create("desktop", "trading_emergency_disabled", "OK", environment, ToolResponse.NewCorrelationId()), cancellationToken);
         TradingAcknowledged = false;
-        ShowActionMessage("Demo trading disabled. Existing exchange orders and positions were not changed.");
+        ShowActionMessage($"{environment} trading disabled. Existing exchange orders and positions were not changed.");
     }
 
     [RelayCommand]
@@ -348,6 +400,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _serverHost.StateChanged -= OnServerStateChanged;
         _connectionManager.StateChanged -= OnProviderStateChanged;
         _preparedOrderStore.Changed -= OnPreparedOrderChanged;
+        _liveConfirmations.Changed -= OnLiveConfirmationChanged;
         _tradingControl.StateChanged -= OnTradingStateChanged;
         Approvals.Dispose();
         Activity.Dispose();
@@ -388,6 +441,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private void OnPreparedOrderChanged(object? sender, PreparedOrder order) =>
         _uiDispatcher.Post(() => OnPropertyChanged(nameof(PendingApprovalCount)));
 
+    private void OnLiveConfirmationChanged(object? sender, LiveActionConfirmation confirmation) =>
+        _uiDispatcher.Post(() => OnPropertyChanged(nameof(PendingApprovalCount)));
+
     private void OnTradingStateChanged(object? sender, TradingSessionSnapshot snapshot) => _uiDispatcher.Post(NotifyTradingState);
 
     private void SelectPage(bool dashboard = false, bool credentials = false, bool risk = false, bool approvals = false, bool activity = false)
@@ -401,8 +457,11 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private void NotifyTradingState()
     {
-        OnPropertyChanged(nameof(AccessStatus)); OnPropertyChanged(nameof(DemoTradingState)); OnPropertyChanged(nameof(DemoTradingDetail));
-        OnPropertyChanged(nameof(IsDemoTradingEnabled)); OnPropertyChanged(nameof(IsDemoTradingDisabled)); OnPropertyChanged(nameof(HeaderSafetyState));
+        OnPropertyChanged(nameof(AccessStatus)); OnPropertyChanged(nameof(TradingState)); OnPropertyChanged(nameof(TradingDetail));
+        OnPropertyChanged(nameof(IsTradingEnabled)); OnPropertyChanged(nameof(IsTradingDisabled)); OnPropertyChanged(nameof(HeaderSafetyState));
+        OnPropertyChanged(nameof(IsDemoTradingEnabled)); OnPropertyChanged(nameof(IsDemoTradingDisabled));
+        OnPropertyChanged(nameof(ShowDemoEnable)); OnPropertyChanged(nameof(ShowLiveEnable));
+        OnPropertyChanged(nameof(LiveTradingStatus));
     }
 
     private void ApplyProviderSnapshot(ProviderConnectionSnapshot snapshot)
@@ -412,6 +471,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         OnPropertyChanged(nameof(OpenPositionCount)); OnPropertyChanged(nameof(OpenOrderCount));
         OnPropertyChanged(nameof(RestHealth)); OnPropertyChanged(nameof(StreamHealth));
         OnPropertyChanged(nameof(SavedKeyPreview)); OnPropertyChanged(nameof(CredentialStorageStatus));
+        OnPropertyChanged(nameof(LiveEnableWarnings));
         OnPropertyChanged(nameof(LastError));
         if (snapshot.CredentialInfo is not null)
         {
@@ -438,6 +498,17 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private static string BuildPermissionSummary(ApiCredentialInfo info) =>
         $"{info.Summary} · Trading: {(info.HasTradingPermission ? "Yes" : "No")} · Wallet: {(info.HasWalletPermission ? "Yes" : "No")} · Withdrawal: {(info.HasWithdrawalPermission ? "Detected" : "No")} · IP-bound: {(info.IsIpBound ? "Yes" : "No")} · {(info.IsMasterAccount ? "Master account" : "Subaccount")}";
+
+    private bool CanConfirmLiveEnable() => string.Equals(LiveConfirmationText, TradingControlService.LiveConfirmationPhrase, StringComparison.Ordinal);
+
+    private void NotifyEnvironmentState()
+    {
+        OnPropertyChanged(nameof(IsLiveEnvironment)); OnPropertyChanged(nameof(IsDemoEnvironment));
+        OnPropertyChanged(nameof(ShowDemoEnable)); OnPropertyChanged(nameof(ShowLiveEnable));
+        OnPropertyChanged(nameof(EnvironmentBadge)); OnPropertyChanged(nameof(HeaderSafetyState));
+        OnPropertyChanged(nameof(LiveTradingStatus)); OnPropertyChanged(nameof(LiveRiskSummary));
+        OnPropertyChanged(nameof(TradingState)); OnPropertyChanged(nameof(TradingDetail));
+    }
 
     private void ApplyServerSnapshot(McpServerSnapshot snapshot)
     {

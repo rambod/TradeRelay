@@ -99,6 +99,12 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
     </Style>
+    <Style Selector="Border.liveBadge">
+      <Setter Property="Background" Value="#351A20" />
+      <Setter Property="BorderBrush" Value="#8A3D4A" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
     <Style Selector="TextBlock.fieldLabel">
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />

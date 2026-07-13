@@ -17,7 +17,12 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
     public event EventHandler<PreparedOrder>? Changed;
 
     /// <summary>Adds a valid normalized simulation with session idempotency.</summary>
-    public PreparedOrderResult Add(string? clientRequestId, OrderValidationResult validation, TradingEnvironment environment, RiskSettingsSnapshot settings)
+    public PreparedOrderResult Add(
+        string? clientRequestId,
+        OrderValidationResult validation,
+        TradingEnvironment environment,
+        RiskSettingsSnapshot settings,
+        Guid connectionGenerationId = default)
     {
         string requestId = clientRequestId?.Trim() ?? string.Empty;
         if (!ClientRequestPattern().IsMatch(requestId)) return Failure("VALIDATION_FAILED", "clientRequestId must contain 1–64 letters, numbers, dots, colons, dashes, or underscores.");
@@ -29,8 +34,23 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
         string clientOrderId = $"tr-{Guid.NewGuid():N}"[..23];
         DateTimeOffset expires = created.AddSeconds(settings.PreparedOrderExpirySeconds);
         PreparedOrderState state = settings.RequireManualApproval ? PreparedOrderState.PendingApproval : PreparedOrderState.Approved;
-        string hash = ComputeHash(preparationId, requestId, clientOrderId, validation.Order, environment, settings, created, expires, validation.Warnings);
-        var order = new PreparedOrder(preparationId, requestId, clientOrderId, validation.Order, environment, settings, state, created, expires, hash, state == PreparedOrderState.Approved ? hash : null, state == PreparedOrderState.Approved ? created : null, null, validation.Warnings);
+        string hash = ComputeHash(preparationId, requestId, clientOrderId, validation.Order, environment, settings, connectionGenerationId, created, expires, validation.Warnings);
+        var order = new PreparedOrder(
+            preparationId,
+            requestId,
+            clientOrderId,
+            validation.Order,
+            environment,
+            settings,
+            state,
+            created,
+            expires,
+            hash,
+            state == PreparedOrderState.Approved ? hash : null,
+            state == PreparedOrderState.Approved ? created : null,
+            null,
+            validation.Warnings,
+            ConnectionGenerationId: connectionGenerationId);
 
         if (!_requestIds.TryAdd(requestId, preparationId)) return Failure("DUPLICATE_REQUEST", "This clientRequestId has already been used in the current session.");
         if (!_orders.TryAdd(preparationId, order))
@@ -50,6 +70,17 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
 
     /// <summary>Gets only unexpired orders requiring approval.</summary>
     public IReadOnlyList<PreparedOrder> GetPending() => GetAll().Where(order => order.State == PreparedOrderState.PendingApproval).ToArray();
+
+    /// <summary>Expires every unexecuted plan during application shutdown.</summary>
+    public void ExpireAllUnexecuted()
+    {
+        foreach (PreparedOrder order in _orders.Values)
+        {
+            if (order.State is not (PreparedOrderState.PendingApproval or PreparedOrderState.Approved)) continue;
+            PreparedOrder expired = order with { State = PreparedOrderState.Expired };
+            if (_orders.TryUpdate(order.PreparationId, expired, order)) RaiseChanged(expired);
+        }
+    }
 
     /// <summary>Approves a pending order only when its immutable hash still matches.</summary>
     public PreparedOrderResult Approve(Guid preparationId, string expectedHash) => Transition(preparationId, expectedHash, PreparedOrderState.Approved);
@@ -126,7 +157,7 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
         return Failure("VALIDATION_FAILED", "The prepared order was not found.");
     }
 
-    private static string ComputeHash(Guid preparationId, string requestId, string clientOrderId, NormalizedOrder order, TradingEnvironment environment, RiskSettingsSnapshot settings, DateTimeOffset created, DateTimeOffset expires, IReadOnlyList<string> warnings)
+    private static string ComputeHash(Guid preparationId, string requestId, string clientOrderId, NormalizedOrder order, TradingEnvironment environment, RiskSettingsSnapshot settings, Guid connectionGenerationId, DateTimeOffset created, DateTimeOffset expires, IReadOnlyList<string> warnings)
     {
         static string Decimal(decimal? value) => value?.ToString("G29", CultureInfo.InvariantCulture) ?? "null";
         var text = new StringBuilder()
@@ -140,7 +171,9 @@ public sealed partial class PreparedOrderStore(TimeProvider timeProvider)
             .Append(Decimal(order.Risk.EstimatedRewardUsd)).Append('|').Append(Decimal(order.Risk.RiskRewardRatio)).Append('|').Append(Decimal(order.Risk.AccountRiskPercent)).Append('|')
             .Append(order.UserNote?.Replace("|", "||", StringComparison.Ordinal) ?? "null").Append('|').Append(environment).Append('|')
             .Append(string.Join(',', settings.AllowedSymbols)).Append('|').Append(Decimal(settings.MaxRiskPerTradePercent)).Append('|').Append(Decimal(settings.MaxOrderNotionalUsd)).Append('|')
-            .Append(settings.MaxOpenPositions).Append('|').Append(Decimal(settings.MaxLeverage)).Append('|').Append(settings.RequireStopLoss).Append('|').Append(settings.RequireManualApproval).Append('|').Append(settings.PreparedOrderExpirySeconds).Append('|')
+            .Append(settings.MaxOpenPositions).Append('|').Append(Decimal(settings.MaxLeverage)).Append('|').Append(Decimal(settings.MaxMarketPriceDeviationPercent)).Append('|')
+            .Append(settings.RequireStopLoss).Append('|').Append(settings.RequireManualApproval).Append('|').Append(settings.PreparedOrderExpirySeconds).Append('|')
+            .Append(connectionGenerationId.ToString("N")).Append('|')
             .Append(created.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)).Append('|').Append(expires.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)).Append('|').Append(string.Join("||", warnings));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
     }

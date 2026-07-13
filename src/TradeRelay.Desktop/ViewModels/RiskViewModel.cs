@@ -20,6 +20,7 @@ internal sealed partial class RiskViewModel : ObservableObject
     [ObservableProperty] private string _maxNotionalUsd = string.Empty;
     [ObservableProperty] private string _maxOpenPositions = string.Empty;
     [ObservableProperty] private string _maxLeverage = string.Empty;
+    [ObservableProperty] private string _maxMarketPriceDeviationPercent = string.Empty;
     [ObservableProperty] private string _expirySeconds = string.Empty;
     [ObservableProperty] private bool _requireStopLoss;
     [ObservableProperty] private bool _requireManualApprovalForDemo;
@@ -73,6 +74,7 @@ internal sealed partial class RiskViewModel : ObservableObject
     partial void OnMaxNotionalUsdChanged(string value) => MarkDirty();
     partial void OnMaxOpenPositionsChanged(string value) => MarkDirty();
     partial void OnMaxLeverageChanged(string value) => MarkDirty();
+    partial void OnMaxMarketPriceDeviationPercentChanged(string value) => MarkDirty();
     partial void OnExpirySecondsChanged(string value) => MarkDirty();
     partial void OnRequireStopLossChanged(bool value) => MarkDirty();
     partial void OnRequireManualApprovalForDemoChanged(bool value) => MarkDirty();
@@ -89,6 +91,7 @@ internal sealed partial class RiskViewModel : ObservableObject
         MaxNotionalUsd = Format(risk.MaxOrderNotionalUsd);
         MaxOpenPositions = risk.MaxOpenPositions.ToString(CultureInfo.InvariantCulture);
         MaxLeverage = Format(risk.MaxLeverage);
+        MaxMarketPriceDeviationPercent = Format(risk.MaxMarketPriceDeviationPercent);
         ExpirySeconds = risk.PreparedOrderExpirySeconds.ToString(CultureInfo.InvariantCulture);
         RequireStopLoss = risk.RequireStopLoss;
         RequireManualApprovalForDemo = risk.RequireManualApprovalForDemo;
@@ -111,7 +114,7 @@ internal sealed partial class RiskViewModel : ObservableObject
     {
         settings = null!;
         string[] symbols = AllowedSymbolsText.Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(RiskEngine.NormalizeSymbol).Distinct(StringComparer.Ordinal).ToArray();
-        if (!TryDecimal(MaxRiskPercent, out decimal risk) || !TryDecimal(MaxNotionalUsd, out decimal notional) || !int.TryParse(MaxOpenPositions, NumberStyles.Integer, CultureInfo.InvariantCulture, out int positions) || !TryDecimal(MaxLeverage, out decimal leverage) || !int.TryParse(ExpirySeconds, NumberStyles.Integer, CultureInfo.InvariantCulture, out int expiry))
+        if (!TryDecimal(MaxRiskPercent, out decimal risk) || !TryDecimal(MaxNotionalUsd, out decimal notional) || !int.TryParse(MaxOpenPositions, NumberStyles.Integer, CultureInfo.InvariantCulture, out int positions) || !TryDecimal(MaxLeverage, out decimal leverage) || !TryDecimal(MaxMarketPriceDeviationPercent, out decimal priceDeviation) || !int.TryParse(ExpirySeconds, NumberStyles.Integer, CultureInfo.InvariantCulture, out int expiry))
         {
             error = "Enter valid numbers using a period as the decimal separator.";
             return false;
@@ -123,6 +126,7 @@ internal sealed partial class RiskViewModel : ObservableObject
             MaxOrderNotionalUsd = notional,
             MaxOpenPositions = positions,
             MaxLeverage = leverage,
+            MaxMarketPriceDeviationPercent = priceDeviation,
             RequireStopLoss = RequireStopLoss,
             RequireManualApprovalForDemo = RequireManualApprovalForDemo,
             RequireManualApprovalForLive = RequireManualApprovalForLive,

@@ -103,7 +103,7 @@ internal sealed class ExchangeConnectionManager(
                 await settingsStore.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
                 _connection = candidate;
                 candidate = null!;
-                SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(apiKey), info, positionCount, orderCount, storageWarning));
+                SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(apiKey), info, positionCount, orderCount, storageWarning, Guid.NewGuid()));
                 return new ExchangeConnectionResult(true, "OK", storageWarning ?? "Bybit credentials were validated and saved.", info, ServiceHealthState.Healthy, stream);
             }
             finally
@@ -182,7 +182,7 @@ internal sealed class ExchangeConnectionManager(
             int orders = (await connection.Account.GetOpenOrdersAsync(null, cancellationToken).ConfigureAwait(false)).Count;
             _connection = connection;
             connection = null!;
-            SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, settings.Bybit.Environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(credentials.ApiKey), info, positions, orders, null));
+            SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, settings.Bybit.Environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(credentials.ApiKey), info, positions, orders, null, Guid.NewGuid()));
         }
         catch (Exception exception)
         {
@@ -208,7 +208,7 @@ internal sealed class ExchangeConnectionManager(
     private void SetSnapshot(ProviderConnectionSnapshot snapshot) { Volatile.Write(ref _snapshot, snapshot); StateChanged?.Invoke(this, snapshot); }
     private static string CredentialId(TradingEnvironment environment) => $"bybit:{environment.ToString().ToLowerInvariant()}";
     private static string Mask(string key) => key.Length <= 4 ? "••••" : $"••••••{key[^4..]}";
-    private static ProviderConnectionSnapshot Empty(TradingEnvironment environment) => new("Bybit", environment, ServiceHealthState.NotConfigured, ServiceHealthState.NotConfigured, false, "None", null, null, 0, 0, null);
+    private static ProviderConnectionSnapshot Empty(TradingEnvironment environment) => new("Bybit", environment, ServiceHealthState.NotConfigured, ServiceHealthState.NotConfigured, false, "None", null, null, 0, 0, null, Guid.NewGuid());
     private static ExchangeConnectionResult Failed(string code, string message) => new(false, code, message, null, ServiceHealthState.Unavailable, ServiceHealthState.NotConfigured);
     private static ExchangeConnectionResult Rejected(ApiCredentialInfo info) => new(false, "UNSAFE_API_PERMISSION", "The API key has withdrawal permission and was rejected.", info, ServiceHealthState.Healthy, ServiceHealthState.NotConfigured);
 }

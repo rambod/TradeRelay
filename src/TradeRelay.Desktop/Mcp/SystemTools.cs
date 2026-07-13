@@ -13,6 +13,7 @@ internal sealed class SystemTools(
     AppSettings settings,
     ExchangeConnectionManager connectionManager,
     PreparedOrderStore preparedOrderStore,
+    LiveActionConfirmationStore liveConfirmations,
     TradingControlService tradingControl,
     ApplicationMetadata metadata,
     TimeProvider timeProvider)
@@ -42,13 +43,13 @@ internal sealed class SystemTools(
             "Bybit",
             environment,
             tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled,
-            LiveTradingEnabled: false,
+            LiveTradingEnabled: environment == TradingEnvironment.Live && tradingControl.Snapshot.Enabled,
             manualApprovalRequired,
             provider.RestHealth,
             provider.StreamHealth,
             provider.CredentialLoaded,
             provider.CredentialSummary,
-            PendingApprovalCount: preparedOrderStore.GetPending().Count,
+            PendingApprovalCount: preparedOrderStore.GetPending().Count + liveConfirmations.GetPending().Count,
             timestamp);
 
         return new ToolResult<SystemStatusSnapshot>(

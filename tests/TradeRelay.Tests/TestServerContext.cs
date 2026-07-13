@@ -23,6 +23,7 @@ internal sealed class TestServerContext : IAsyncDisposable
     public LocalMcpServerHost Host { get; }
     public ExchangeConnectionManager ConnectionManager { get; }
     public PreparedOrderStore PreparedOrderStore { get; }
+    public LiveActionConfirmationStore LiveConfirmations { get; }
     public OrderPreparationService OrderPreparationService { get; }
     public ApplicationSettingsStore SettingsStore { get; }
     public RiskEngine RiskEngine { get; }
@@ -87,11 +88,12 @@ internal sealed class TestServerContext : IAsyncDisposable
             NullLogger<ExchangeConnectionManager>.Instance);
         RiskEngine = new RiskEngine();
         PreparedOrderStore = new PreparedOrderStore(timeProvider);
+        LiveConfirmations = new LiveActionConfirmationStore(timeProvider);
         OrderPreparationService = new OrderPreparationService(ConnectionManager, RiskEngine, PreparedOrderStore, settings);
         AuditLog = new AuditLogService(paths, timeProvider);
-        TradingControl = new TradingControlService(ConnectionManager, RiskEngine, settings, timeProvider);
-        TradingGate = new TradingGate(TradingControl, ConnectionManager, AuditLog, settings);
-        OrderExecutionService = new OrderExecutionService(ConnectionManager, TradingGate, OrderPreparationService, PreparedOrderStore, AuditLog, timeProvider);
+        TradingControl = new TradingControlService(ConnectionManager, RiskEngine, settings, AuditLog, LiveConfirmations, timeProvider);
+        TradingGate = new TradingGate(TradingControl, ConnectionManager, AuditLog, settings, RiskEngine);
+        OrderExecutionService = new OrderExecutionService(ConnectionManager, TradingControl, TradingGate, OrderPreparationService, PreparedOrderStore, LiveConfirmations, AuditLog, timeProvider);
         Host = new LocalMcpServerHost(
             settings,
             tokenService,
@@ -100,6 +102,7 @@ internal sealed class TestServerContext : IAsyncDisposable
             ConnectionManager,
             OrderPreparationService,
             PreparedOrderStore,
+            LiveConfirmations,
             OrderExecutionService,
             TradingControl,
             AuditLog,

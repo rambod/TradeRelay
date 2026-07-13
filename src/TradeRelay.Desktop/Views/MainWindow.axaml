@@ -42,6 +42,7 @@
         </StackPanel>
         <Border
             Grid.Column="1"
+            IsVisible="{Binding IsDemoEnvironment}"
             Padding="12,7"
             VerticalAlignment="Center"
             Background="#203649"
@@ -52,6 +53,14 @@
               FontWeight="SemiBold"
               Foreground="#B9D8EF"
               Text="{Binding HeaderSafetyState}" />
+        </Border>
+        <Border
+            Grid.Column="1"
+            Classes="liveBadge"
+            IsVisible="{Binding IsLiveEnvironment}"
+            Padding="12,7"
+            VerticalAlignment="Center">
+          <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="{Binding HeaderSafetyState}" />
         </Border>
       </Grid>
     </Border>
@@ -77,7 +86,7 @@
             <TextBlock
                 Classes="muted"
                 MaxWidth="420"
-                Text="Exchange writes require an explicitly enabled Bybit Demo session. Live writes remain unavailable."
+                Text="Exchange writes require an explicitly enabled desktop session. Live adds mandatory startup confirmation and stricter action approval."
                 TextWrapping="Wrap" />
           </StackPanel>
 
@@ -122,11 +131,12 @@
 
           <Border Classes="panel" Padding="18">
             <StackPanel Spacing="10">
-              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="{Binding DemoTradingState}"/><TextBlock Classes="muted" Text="{Binding DemoTradingDetail}" TextWrapping="Wrap"/></StackPanel><Border Grid.Column="1" Classes="infoBadge"><TextBlock Classes="statusLabel" Text="DEMO ONLY"/></Border></Grid>
-              <CheckBox IsVisible="{Binding IsDemoTradingDisabled}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this sends write requests to my Bybit Demo account."/>
+              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="{Binding TradingState}"/><TextBlock Classes="muted" Text="{Binding TradingDetail}" TextWrapping="Wrap"/></StackPanel><Border Grid.Column="1" Classes="infoBadge" IsVisible="{Binding IsDemoEnvironment}" Padding="10,6"><TextBlock Text="DEMO"/></Border><Border Grid.Column="1" Classes="liveBadge" IsVisible="{Binding IsLiveEnvironment}" Padding="10,6"><TextBlock Foreground="{DynamicResource ErrorBrush}" FontWeight="SemiBold" Text="LIVE"/></Border></Grid>
+              <CheckBox IsVisible="{Binding IsDemoEnvironment}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this sends write requests to my Bybit Demo account."/>
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="primary" IsVisible="{Binding IsDemoTradingDisabled}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
-                <Button Classes="danger" IsVisible="{Binding IsDemoTradingEnabled}" Command="{Binding DisableDemoTradingCommand}" Content="Disable new trading actions"/>
+                <Button Classes="primary" IsVisible="{Binding ShowDemoEnable}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
+                <Button Classes="danger" IsVisible="{Binding ShowLiveEnable}" Command="{Binding OpenLiveEnableDialogCommand}" Content="Review and enable Live"/>
+                <Button Classes="danger" IsVisible="{Binding IsTradingEnabled}" Command="{Binding DisableTradingCommand}" Content="Disable New Trading Actions"/>
               </StackPanel>
               <TextBlock Classes="muted" Text="Disabling blocks new writes immediately. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/>
             </StackPanel>
@@ -281,7 +291,7 @@
             </StackPanel>
           </Border>
           <Border Padding="18" Background="#351A1D" BorderBrush="#7A343B" BorderThickness="1" CornerRadius="10">
-            <TextBlock Foreground="#F2A8AE" Text="TradeRelay rejects every API key with withdrawal permission. Only a validated Demo read/write key can enable session trading; Live writes remain blocked." TextWrapping="Wrap" />
+            <TextBlock Foreground="#F2A8AE" Text="TradeRelay rejects every API key with withdrawal permission. Read/write keys can enable only their matching environment after all session safety checks pass." TextWrapping="Wrap" />
           </Border>
         </StackPanel>
       </Grid>
@@ -295,6 +305,44 @@
     </Grid>
     <Grid Grid.Row="2" IsVisible="{Binding IsActivitySelected}">
       <localViews:ActivityView DataContext="{Binding Activity}" />
+    </Grid>
+
+    <Grid Grid.RowSpan="3" Background="#E60B1118" IsVisible="{Binding IsLiveEnableDialogOpen}">
+      <Border
+          Classes="panel"
+          Width="620"
+          MaxHeight="580"
+          Padding="26"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center">
+        <ScrollViewer>
+          <StackPanel Spacing="16">
+            <StackPanel Spacing="5">
+              <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="Enable Live trading" />
+              <TextBlock Classes="muted" Text="This enables real Bybit mainnet write operations for the current application session only." TextWrapping="Wrap" />
+            </StackPanel>
+            <Border Classes="liveBadge" Padding="16">
+              <StackPanel Spacing="8">
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="LIVE · REAL FUNDS AND POSITIONS" />
+                <TextBlock Text="{Binding LiveRiskSummary}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="fieldLabel" Text="Credential warnings" />
+              <TextBlock Classes="warningText" Text="{Binding LiveEnableWarnings}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="fieldLabel" Text="Type ENABLE LIVE TRADING exactly" />
+              <TextBox Text="{Binding LiveConfirmationText, Mode=TwoWay}" />
+            </StackPanel>
+            <TextBlock Classes="muted" Text="Enabling never cancels or changes existing exchange state. Disabling later blocks only new write actions." TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+              <Button Classes="quiet" Command="{Binding CancelLiveEnableCommand}" Content="Cancel" />
+              <Button Classes="danger" Command="{Binding ConfirmLiveEnableCommand}" Content="Enable Live trading" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
     </Grid>
   </Grid>
 </Window>

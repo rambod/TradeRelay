@@ -19,8 +19,9 @@ public sealed class MainWindowViewModelTests
             context.TokenService,
             context.ConnectionManager,
             context.PreparedOrderStore,
+            context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
-            new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
             new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
             context.TradingControl,
             context.AuditLog,
@@ -62,8 +63,9 @@ public sealed class MainWindowViewModelTests
             context.TokenService,
             context.ConnectionManager,
             context.PreparedOrderStore,
+            context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
-            new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
             new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
             context.TradingControl,
             context.AuditLog,
@@ -102,8 +104,9 @@ public sealed class MainWindowViewModelTests
             context.TokenService,
             context.ConnectionManager,
             context.PreparedOrderStore,
+            context.LiveConfirmations,
             new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
-            new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+            new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
             new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
             context.TradingControl,
             context.AuditLog,
@@ -150,6 +153,35 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task LiveEnableDialog_RequiresExactPhraseAndShowsPersistentLiveState()
+    {
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory(readOnly: false));
+        Assert.True((await context.ConnectionManager.SaveAsync(TradingEnvironment.Live, "live-key", "live-secret", false, default)).Success);
+        using MainWindowViewModel viewModel = Create(context);
+        await viewModel.StartServerCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLiveEnvironment);
+        Assert.Contains("LIVE", viewModel.HeaderSafetyState, StringComparison.Ordinal);
+        viewModel.OpenLiveEnableDialogCommand.Execute(null);
+        Assert.True(viewModel.IsLiveEnableDialogOpen);
+        viewModel.LiveConfirmationText = "enable live trading";
+        Assert.False(viewModel.ConfirmLiveEnableCommand.CanExecute(null));
+        viewModel.LiveConfirmationText = " ENABLE LIVE TRADING ";
+        Assert.False(viewModel.ConfirmLiveEnableCommand.CanExecute(null));
+        viewModel.LiveConfirmationText = "ENABLE LIVE TRADING";
+        Assert.True(viewModel.ConfirmLiveEnableCommand.CanExecute(null));
+
+        await viewModel.ConfirmLiveEnableCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsTradingEnabled);
+        Assert.False(viewModel.IsLiveEnableDialogOpen);
+        Assert.Contains("TRADING ENABLED", viewModel.HeaderSafetyState, StringComparison.Ordinal);
+
+        await viewModel.DisableTradingCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsTradingEnabled);
+        Assert.Equal(TradingSessionState.EmergencyDisabled, context.TradingControl.Snapshot.State);
+    }
+
+    [Fact]
     public async Task ActivityViewModel_FiltersLiveAuditEvents()
     {
         await using TestServerContext context = TestServerContext.Create();
@@ -169,8 +201,9 @@ public sealed class MainWindowViewModelTests
         context.TokenService,
         context.ConnectionManager,
         context.PreparedOrderStore,
+        context.LiveConfirmations,
         new RiskViewModel(context.Settings, context.SettingsStore, context.RiskEngine),
-        new ApprovalsViewModel(context.PreparedOrderStore, new ImmediateUiDispatcher(), TimeProvider.System),
+        new ApprovalsViewModel(context.PreparedOrderStore, context.LiveConfirmations, new ImmediateUiDispatcher(), TimeProvider.System),
         new ActivityViewModel(context.AuditLog, new ImmediateUiDispatcher()),
         context.TradingControl,
         context.AuditLog,

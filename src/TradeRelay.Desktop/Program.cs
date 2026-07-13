@@ -58,6 +58,7 @@ internal static class Program
         builder.Services.AddSingleton<IExchangeProviderFactory, BybitExchangeProviderFactory>();
         builder.Services.AddSingleton<RiskEngine>();
         builder.Services.AddSingleton<PreparedOrderStore>();
+        builder.Services.AddSingleton<LiveActionConfirmationStore>();
         builder.Services.AddSingleton<OrderPreparationService>();
         builder.Services.AddSingleton<AuditLogService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<AuditLogService>());

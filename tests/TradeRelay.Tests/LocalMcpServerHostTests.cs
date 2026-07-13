@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using TradeRelay.Core.Models;
@@ -93,7 +94,7 @@ public sealed class LocalMcpServerHostTests
             context.TokenService.CurrentToken);
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
-        Assert.Equal("0.5.0", client.ServerInfo.Version);
+        Assert.Equal("0.6.0", client.ServerInfo.Version);
         Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
@@ -103,11 +104,11 @@ public sealed class LocalMcpServerHostTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        Assert.Contains("0.5.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains("0.6.0", structuredContent, StringComparison.Ordinal);
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
         Assert.Contains("TradingDisabled", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
-        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals", "execute_prepared_order", "cancel_order", "cancel_all_orders", "close_position", "set_trading_stop"];
+        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals", "execute_prepared_order", "cancel_order", "cancel_all_orders", "close_position", "set_trading_stop", "get_live_action_confirmation", "get_pending_live_confirmations"];
         foreach (string name in expected) Assert.Contains(tools, tool => tool.Name == name);
     }
 
@@ -189,6 +190,43 @@ public sealed class LocalMcpServerHostTests
         CallToolResult stop = await Assert.Single(tools, item => item.Name == "set_trading_stop").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["stopLoss"] = 90m });
         Assert.Contains("VALIDATION_FAILED", stop.StructuredContent?.GetRawText(), StringComparison.Ordinal);
         Assert.DoesNotContain("write-secret", string.Join(string.Empty, (await context.AuditLog.LoadRecentAsync(default)).Events.Select(item => item.ProviderResult)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveTools_RequireSessionPlanAndDestructiveActionApprovalThroughOfficialClient()
+    {
+        var trading = new StubTradingProvider();
+        OrderSnapshot order = new("order-1", "client-1", "BTCUSDT", TradeSide.Buy, "Limit", 100m, 1m, 0m, "New", false, DateTimeOffset.UtcNow);
+        await using TestServerContext context = TestServerContext.Create(providerFactory: new SuccessfulTestProviderFactory(readOnly: false, trading: trading, orders: [order]));
+        Assert.True((await context.ConnectionManager.SaveAsync(TradingEnvironment.Live, "live-key", "live-secret", false, default)).Success);
+        await context.Host.StartServerAsync();
+        await using McpClient client = await CreateClientAsync(context.Host.Snapshot.Url, context.TokenService.CurrentToken);
+        IList<McpClientTool> tools = await client.ListToolsAsync();
+
+        McpClientTool prepare = Assert.Single(tools, item => item.Name == "prepare_order");
+        await prepare.CallAsync(new Dictionary<string, object?> { ["clientRequestId"] = "m6-live-plan", ["symbol"] = "BTCUSDT", ["side"] = "Buy", ["orderType"] = "Limit", ["quantity"] = .1m, ["limitPrice"] = 100m, ["stopLoss"] = 90m, ["takeProfit"] = 120m });
+        PreparedOrder plan = Assert.Single(context.PreparedOrderStore.GetAll());
+        McpClientTool execute = Assert.Single(tools, item => item.Name == "execute_prepared_order");
+        Assert.Contains("TRADING_DISABLED", (await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() })).StructuredContent?.GetRawText(), StringComparison.Ordinal);
+        Assert.True(context.PreparedOrderStore.Approve(plan.PreparationId, plan.ImmutableHash).Success);
+        Assert.True((await context.TradingControl.EnableAsync(true, false, "ENABLE LIVE TRADING", default)).Allowed);
+        Assert.Contains("\"success\":true", (await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() })).StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
+
+        McpClientTool cancelAll = Assert.Single(tools, item => item.Name == "cancel_all_orders");
+        CallToolResult requested = await cancelAll.CallAsync(new Dictionary<string, object?> { ["confirm"] = true, ["clientRequestId"] = "m6-live-cancel-all" });
+        string requestedJson = requested.StructuredContent?.GetRawText() ?? string.Empty;
+        Assert.Contains("LIVE_CONFIRMATION_REQUIRED", requestedJson, StringComparison.Ordinal);
+        using JsonDocument document = JsonDocument.Parse(requestedJson);
+        Guid confirmationId = document.RootElement.GetProperty("data").GetProperty("confirmation").GetProperty("confirmationId").GetGuid();
+        LiveActionConfirmation confirmation = Assert.IsType<LiveActionConfirmation>(context.LiveConfirmations.Get(confirmationId));
+        Assert.True(context.LiveConfirmations.Approve(confirmationId, confirmation.ImmutableHash).Success);
+        CallToolResult confirmed = await cancelAll.CallAsync(new Dictionary<string, object?> { ["confirm"] = true, ["clientRequestId"] = "m6-live-cancel-all", ["liveConfirmationId"] = confirmationId.ToString() });
+        Assert.Contains("\"success\":true", confirmed.StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, trading.CancelAllCount);
+
+        context.TradingControl.Disable("Emergency test.", emergency: true);
+        CallToolResult blocked = await Assert.Single(tools, item => item.Name == "cancel_order").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["exchangeOrderId"] = "order-1" });
+        Assert.Contains("TRADING_DISABLED", blocked.StructuredContent?.GetRawText(), StringComparison.Ordinal);
     }
 
     [Fact]

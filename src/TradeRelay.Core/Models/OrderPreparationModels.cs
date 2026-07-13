@@ -25,10 +25,25 @@ public sealed record RiskSettingsSnapshot(
     decimal MaxOrderNotionalUsd,
     int MaxOpenPositions,
     decimal MaxLeverage,
+    decimal MaxMarketPriceDeviationPercent,
     bool RequireStopLoss,
     bool RequireManualApproval,
     int PreparedOrderExpirySeconds)
 {
+    /// <summary>Creates a snapshot using the default Live market-price deviation.</summary>
+    public RiskSettingsSnapshot(
+        IReadOnlyList<string> allowedSymbols,
+        decimal maxRiskPerTradePercent,
+        decimal maxOrderNotionalUsd,
+        int maxOpenPositions,
+        decimal maxLeverage,
+        bool requireStopLoss,
+        bool requireManualApproval,
+        int preparedOrderExpirySeconds)
+        : this(allowedSymbols, maxRiskPerTradePercent, maxOrderNotionalUsd, maxOpenPositions, maxLeverage, 0.50m, requireStopLoss, requireManualApproval, preparedOrderExpirySeconds)
+    {
+    }
+
     /// <summary>Creates an immutable snapshot for an environment.</summary>
     public static RiskSettingsSnapshot Create(RiskSettings settings, TradingEnvironment environment) => new(
         settings.AllowedSymbols.Order(StringComparer.Ordinal).ToArray(),
@@ -36,6 +51,7 @@ public sealed record RiskSettingsSnapshot(
         settings.MaxOrderNotionalUsd,
         settings.MaxOpenPositions,
         settings.MaxLeverage,
+        settings.MaxMarketPriceDeviationPercent,
         settings.RequireStopLoss,
         environment == TradingEnvironment.Live ? settings.RequireManualApprovalForLive : settings.RequireManualApprovalForDemo,
         settings.PreparedOrderExpirySeconds);
@@ -101,6 +117,7 @@ public sealed record PreparedOrder(
     DateTimeOffset? ApprovedAtUtc,
     DateTimeOffset? RejectedAtUtc,
     IReadOnlyList<string> Warnings,
+    Guid ConnectionGenerationId,
     DateTimeOffset? ExecutionStartedAtUtc = null,
     DateTimeOffset? ExecutionCompletedAtUtc = null,
     OrderSubmissionResult? Submission = null);

@@ -19,6 +19,7 @@ public sealed partial class RiskEngine
         if (settings.MaxOrderNotionalUsd <= 0m) errors.Add("Maximum order notional must be greater than 0.");
         if (settings.MaxOpenPositions is < 1 or > 100) errors.Add("Maximum open positions must be between 1 and 100.");
         if (settings.MaxLeverage <= 0m) errors.Add("Maximum leverage must be greater than 0.");
+        if (settings.MaxMarketPriceDeviationPercent is <= 0m or > 10m) errors.Add("Maximum Live market-price deviation must be greater than 0 and no more than 10 percent.");
         if (settings.PreparedOrderExpirySeconds is < 30 or > 3600) errors.Add("Prepared-order expiration must be between 30 and 3600 seconds.");
         if (!settings.RequireStopLoss) warnings.Add("Stop loss is optional. Plans without one have unknown estimated risk.");
         return new(errors.Count == 0, errors, warnings);
@@ -113,7 +114,7 @@ public sealed partial class RiskEngine
         decimal? ratio = estimatedRisk is > 0m && reward is not null ? reward.Value / estimatedRisk.Value : null;
 
         if (!credentialInfo.HasTradingPermission) warnings.Add("The loaded API key cannot trade. This plan remains a read-only simulation.");
-        if (account.Environment == TradingEnvironment.Live) warnings.Add("Live Simulation: Live exchange writes are unavailable in this milestone.");
+        if (account.Environment == TradingEnvironment.Live) warnings.Add("Live plan: execution requires explicit session enablement and the configured approval policy.");
         else warnings.Add("Demo plan: execution still requires explicit session enablement and the centralized trading gate.");
 
         var normalized = new NormalizedOrder(symbol, request.Side, request.OrderType, request.Quantity, quantity, request.LimitPrice, limitPrice, entryPrice, request.StopLoss, stopLoss, request.TakeProfit, takeProfit, leverage, new RiskEstimate(notional, estimatedRisk, reward, ratio, accountRisk), NormalizeNote(request.UserNote));

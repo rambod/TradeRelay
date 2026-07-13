@@ -6,11 +6,11 @@ product
 
 ## Users
 
-Developers and technical operators running a local MCP bridge who need to inspect exchange state, configure conservative limits, review trading plans, and explicitly control Demo execution without surrendering authority to an AI client.
+Developers and technical operators running a local MCP bridge who need to inspect exchange state, configure conservative limits, review trading plans, and explicitly control Demo or Live execution without surrendering authority to an AI client.
 
 ## Product Purpose
 
-TradeRelay makes local exchange access observable and controllable. Success means users can understand the current safety posture, validate risk, review exactly what an MCP client proposes, and trace every explicitly enabled Demo write through reconciliation.
+TradeRelay makes local exchange access observable and controllable. Success means users can understand the current safety posture, validate risk, review exactly what an MCP client proposes, and trace every explicitly enabled Demo or Live write through reconciliation.
 
 ## Brand Personality
 

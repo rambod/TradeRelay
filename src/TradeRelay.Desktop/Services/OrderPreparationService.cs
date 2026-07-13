@@ -29,7 +29,12 @@ internal sealed class OrderPreparationService(
         OrderValidationResult validation = await ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validation.Valid) return new(false, validation.Errors.Any(IsRiskError) ? "RISK_LIMIT_EXCEEDED" : "VALIDATION_FAILED", "The simulated order did not pass validation.", null);
         TradingEnvironment environment = connectionManager.Snapshot.Environment;
-        return preparedOrderStore.Add(request.ClientRequestId, validation, environment, RiskSettingsSnapshot.Create(settings.Risk, environment));
+        return preparedOrderStore.Add(
+            request.ClientRequestId,
+            validation,
+            environment,
+            RiskSettingsSnapshot.Create(settings.Risk, environment),
+            connectionManager.Snapshot.ConnectionGenerationId);
     }
 
     public async Task<OrderValidationResult> RevalidateAsync(PreparedOrder prepared, CancellationToken cancellationToken)
@@ -42,6 +47,7 @@ internal sealed class OrderPreparationService(
             MaxOrderNotionalUsd = snapshot.MaxOrderNotionalUsd,
             MaxOpenPositions = snapshot.MaxOpenPositions,
             MaxLeverage = snapshot.MaxLeverage,
+            MaxMarketPriceDeviationPercent = snapshot.MaxMarketPriceDeviationPercent,
             RequireStopLoss = snapshot.RequireStopLoss,
             RequireManualApprovalForDemo = snapshot.RequireManualApproval,
             RequireManualApprovalForLive = true,

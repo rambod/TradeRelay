@@ -23,6 +23,7 @@ internal sealed class LocalMcpServerHost(
     ExchangeConnectionManager connectionManager,
     OrderPreparationService orderPreparationService,
     PreparedOrderStore preparedOrderStore,
+    LiveActionConfirmationStore liveConfirmations,
     OrderExecutionService orderExecutionService,
     TradingControlService tradingControl,
     AuditLogService auditLog,
@@ -40,8 +41,15 @@ internal sealed class LocalMcpServerHost(
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Task StopAsync(CancellationToken cancellationToken) =>
-        StopServerAsync(cancellationToken);
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        tradingControl.Disable("Application shutdown disabled all new trading actions.", emergency: true);
+        preparedOrderStore.ExpireAllUnexecuted();
+        liveConfirmations.ExpireAllUnexecuted();
+        await tradingControl.WaitForActiveWritesAsync(ShutdownTimeout, cancellationToken).ConfigureAwait(false);
+        await auditLog.TryWriteAsync(auditLog.Create("system", "application_shutdown", "OK", settings.Bybit.Environment, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
+        await StopServerAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task StartServerAsync(CancellationToken cancellationToken = default)
     {
@@ -125,7 +133,8 @@ internal sealed class LocalMcpServerHost(
             }
 
             SetSnapshot(Snapshot with { State = McpServerState.Stopping });
-            tradingControl.Disable("The local MCP server stopped; Demo trading was disabled.");
+            tradingControl.Disable("The local MCP server stopped; new trading actions were disabled.", emergency: true);
+            await tradingControl.WaitForActiveWritesAsync(ShutdownTimeout, cancellationToken).ConfigureAwait(false);
 
             WebApplication? application = _application;
             _application = null;
@@ -201,6 +210,7 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(connectionManager);
         builder.Services.AddSingleton(orderPreparationService);
         builder.Services.AddSingleton(preparedOrderStore);
+        builder.Services.AddSingleton(liveConfirmations);
         builder.Services.AddSingleton(orderExecutionService);
         builder.Services.AddSingleton(tradingControl);
         builder.Services.AddSingleton(auditLog);

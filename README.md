@@ -3,11 +3,11 @@
 TradeRelay is a local desktop bridge intended to connect MCP-capable coding agents to controlled Bybit market-data and trading workflows.
 
 > [!WARNING]
-> TradeRelay is under active development. Milestone 5 can send explicitly enabled write requests to Bybit Demo only. Live exchange writes remain unavailable.
+> TradeRelay is under active development. Milestone 6 supports session-gated Bybit Demo and Live writes. Use Demo first; Live can affect real funds and positions.
 
 ## Current status
 
-Milestone 5 provides:
+Milestone 6 provides:
 
 - A .NET 10 solution with Avalonia desktop application, core, Bybit provider-boundary, and test projects
 - Dashboard and credential control panels
@@ -19,18 +19,21 @@ Milestone 5 provides:
 - MCP tools for system status, connection status, tickers, candles, instruments, order books, balances, positions, and open orders
 - Instrument-aware position sizing, order normalization, and risk validation
 - Expiring immutable prepared simulations with idempotent request IDs and SHA-256 hashes
-- Desktop-only approval and rejection with Demo auto-approval policy
+- Desktop-only approval and rejection with environment-specific policy
 - Risk, Approvals, and execution-focused Activity views
 - MCP tools for risk settings, position sizing, validation, preparation, and approval inspection
-- Session-only, desktop-enabled Bybit Demo trading with centralized safety gates
+- Session-only, desktop-enabled Bybit Demo and Live trading with one centralized safety gate
+- Exact-phrase Live enablement, persistent Live state, emergency disable, and connection-bound prepared plans
+- Configurable Live market-price drift rejection using immutable risk snapshots
+- Short-lived, single-use desktop confirmations for Live cancel-all and close-position actions
 - Exactly-once prepared-order submission, WebSocket/REST reconciliation, partial-fill reporting, and ambiguous-state protection
-- Demo order cancellation, explicit cancel-all, reduce-only position closing, and full-position trading stops
+- Environment-aware order cancellation, explicit cancel-all, reduce-only position closing, and full-position trading stops
 - Redacted, append-only daily JSONL activity auditing
 - Unit, Kestrel integration, security, concurrency, and optional Bybit Demo integration coverage
 
-Live execution, persistent trading enablement, databases, and automatic exchange cleanup are intentionally not implemented. Stopping or disabling TradeRelay never cancels orders, closes positions, or removes protection.
+Persistent trading enablement, databases, and automatic exchange cleanup are intentionally not implemented. Stopping or disabling TradeRelay never cancels orders, closes positions, or removes protection.
 
-Current version: `0.5.0`
+Current version: `0.6.0`
 
 ## Credential safety
 
@@ -42,6 +45,8 @@ Current version: `0.5.0`
 Optional Bybit Demo integration tests use `TRADERELAY_BYBIT_DEMO_API_KEY` and `TRADERELAY_BYBIT_DEMO_API_SECRET`. They do nothing when those variables are absent and never target Live.
 
 Write-capable Demo integration tests additionally require an explicit `TRADERELAY_RUN_DEMO_TRADING_TESTS=1` opt-in and never run in normal test execution.
+
+TradeRelay contains no automated real-Live write test. Live verification is limited to fake-provider safety integration and manual read-only/operator checks.
 
 ## Release roadmap
 

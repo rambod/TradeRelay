@@ -12,4 +12,5 @@ public sealed record ProviderConnectionSnapshot(
     ApiCredentialInfo? CredentialInfo,
     int OpenPositionCount,
     int OpenOrderCount,
-    string? LastError);
+    string? LastError,
+    Guid ConnectionGenerationId);

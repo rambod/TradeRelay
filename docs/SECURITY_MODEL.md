@@ -1,0 +1,42 @@
+# TradeRelay Security Model
+
+TradeRelay is a local control plane for exchange access. It reduces accidental or unauthorized writes, but it cannot remove market, exchange, credential, or operator risk.
+
+## Local boundary and secrets
+
+- The MCP server binds only to `127.0.0.1` and requires a cryptographically random bearer token.
+- API credentials and the MCP token use operating-system protected storage when available and otherwise remain session-only.
+- Credentials, tokens, authorization headers, signatures, and raw authenticated payloads are excluded from MCP results, settings, logs, and JSONL audit events.
+- API keys with withdrawal permission are rejected. Read/write, unbound, master-account, broad-permission, and expiring keys are shown as explicit warnings.
+
+## Trading enablement
+
+Every application launch begins with trading disabled. Demo and Live must be enabled separately from the desktop after the MCP server, credentials, account access, risk settings, audit storage, and reconciliation path pass readiness checks.
+
+Live additionally requires the exact phrase `ENABLE LIVE TRADING`. Enablement applies only to the current process and matching authenticated connection. Environment changes, credential changes, provider failure, MCP stop, audit failure, emergency disable, or shutdown immediately block new writes.
+
+`Disable New Trading Actions` does not cancel exchange orders, close positions, or remove stop-loss or take-profit protection.
+
+## Plans, approvals, and destructive actions
+
+- Orders originate from immutable prepared plans with caller idempotency, expiration, environment, connection generation, risk snapshot, canonical SHA-256 hash, and optional desktop approval.
+- Live manual approval is enabled by default. Changing that preference affects only new plans.
+- Live market orders are rejected when the current executable price differs from the approved estimate by more than the plan's stored price-deviation limit.
+- Live cancel-all and close-position requests first create a 60-second immutable desktop confirmation. The MCP caller may execute only the exact approved parameters, once, in the same Live trading and provider-connection session.
+- Cancel-all still requires `confirm=true`. Position closes re-fetch the current position, clamp quantity, and use reduce-only behavior.
+
+## Central gate and reconciliation
+
+Every exchange write enters the same centralized gate. It verifies session state, environment agreement, credentials, permissions, risk health, audit health, provider availability, plan connection binding, and required approvals before granting an atomic write lease.
+
+Order submission is never blindly retried. REST acknowledgement is provisional: TradeRelay waits for private-stream evidence and then performs one REST reconciliation lookup. Ambiguous state is reported as `ORDER_STATE_UNKNOWN` and disables new trading actions.
+
+## Audit and shutdown
+
+Exchange writes require a successful pre-action audit append. Later audit failure faults audit health and blocks subsequent writes. Audit files are append-only UTF-8 JSONL under the normal per-user application-data directory.
+
+Shutdown disables new writes first, expires unexecuted plans and Live confirmations, permits active reconciliation for a short bounded interval, records shutdown, disconnects streams, disposes clients, and stops the local server. It never performs automatic exchange cleanup.
+
+## Testing policy
+
+Normal tests use fake providers and a real loopback Kestrel/MCP client path. Optional write integration targets Bybit Demo only. The repository never automates a real Bybit Live write.
