@@ -27,6 +27,8 @@ TradeRelay remains one desktop process. `TradeRelay.Desktop` owns Avalonia, the 
 
 Do not add a database, microservice, MediatR, repository layer, background trading queue, persistent trading enablement, telemetry, or another exchange adapter as incidental work.
 
+The canonical cross-client Agent Skill lives at `integrations/skills/traderelay-operator`. Validate it after every change with the `skill-creator` quick validator before packaging. The desktop project includes this directory under `Skills/traderelay-operator` in build and publish output.
+
 ## Application data
 
 Use `TRADERELAY_APP_DATA` to isolate local development or smoke-test state:

@@ -22,4 +22,5 @@ internal sealed class ApplicationDataPaths
     public string AuditDirectory => Path.Combine(Root, "audit");
     public string LogsDirectory => Path.Combine(Root, "logs");
     public string DiagnosticsDirectory => Path.Combine(Root, "diagnostics");
+    public string OAuthClientsFile => Path.Combine(Root, "oauth-clients.json");
 }

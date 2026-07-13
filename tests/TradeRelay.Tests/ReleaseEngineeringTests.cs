@@ -83,6 +83,27 @@ public sealed partial class ReleaseEngineeringTests
         }
     }
 
+    [Fact]
+    public void CanonicalOperatorSkillAndClientGuidesPreserveSafetyBoundaries()
+    {
+        string skillRoot = Path.Combine(Root, "integrations/skills/traderelay-operator");
+        string skill = File.ReadAllText(Path.Combine(skillRoot, "SKILL.md"));
+        string metadata = File.ReadAllText(Path.Combine(skillRoot, "agents/openai.yaml"));
+        Assert.Contains("get_system_status", skill, StringComparison.Ordinal);
+        Assert.Contains("Never enable Demo or Live trading", skill, StringComparison.Ordinal);
+        Assert.Contains("Never retry order placement after an ambiguous response", skill, StringComparison.Ordinal);
+        Assert.Contains("reconciled outcome", skill, StringComparison.Ordinal);
+        Assert.Contains("value: \"traderelay\"", metadata, StringComparison.Ordinal);
+        Assert.DoesNotContain("TRADERELAY_MCP_TOKEN", metadata, StringComparison.Ordinal);
+
+        string codex = File.ReadAllText(Path.Combine(Root, "docs/CODEX_SETUP.md"));
+        string claude = File.ReadAllText(Path.Combine(Root, "docs/CLAUDE_CODE_SETUP.md"));
+        string gemini = File.ReadAllText(Path.Combine(Root, "docs/GEMINI_CLI_SETUP.md"));
+        Assert.Contains("${TRADERELAY_MCP_TOKEN}", claude, StringComparison.Ordinal);
+        Assert.Contains("OAuth", codex, StringComparison.Ordinal);
+        Assert.Contains("OAuth", gemini, StringComparison.Ordinal);
+    }
+
     [GeneratedRegex(@"uses:\s+[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}(?:\s+#.*)?$")]
     private static partial Regex PinnedActionPattern();
 }

@@ -34,6 +34,7 @@ internal sealed class TestServerContext : IAsyncDisposable
     public ApplicationDataPaths Paths { get; }
     public SensitiveDataRedactor Redactor { get; }
     public SafeLogService SafeLog { get; }
+    public OAuthPairingService OAuth { get; }
     private string DataDirectory { get; set; } = string.Empty;
 
     public static TestServerContext Create(
@@ -84,6 +85,7 @@ internal sealed class TestServerContext : IAsyncDisposable
         Paths = new ApplicationDataPaths(DataDirectory);
         Redactor = new SensitiveDataRedactor();
         SafeLog = new SafeLogService(Paths, timeProvider, Redactor);
+        OAuth = new OAuthPairingService(Paths, new InMemoryProtectedSecretStore(), timeProvider);
         SettingsStore = new ApplicationSettingsStore(Paths);
         ConnectionManager = new ExchangeConnectionManager(
             settings,
@@ -113,6 +115,7 @@ internal sealed class TestServerContext : IAsyncDisposable
             AuditLog,
             SafeLog,
             new ExchangeProviderRegistry([providerFactory]),
+            OAuth,
             logger);
     }
 
@@ -129,5 +132,14 @@ internal sealed class TestServerContext : IAsyncDisposable
         public Task<IReadOnlyList<Candle>> GetCandlesAsync(string symbol, CandleInterval interval, int limit, CancellationToken cancellationToken) => throw new ProviderException("PROVIDER_UNAVAILABLE", "Unavailable in test.");
         public Task<InstrumentInfo> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) => throw new ProviderException("PROVIDER_UNAVAILABLE", "Unavailable in test.");
         public Task<OrderBookSnapshot> GetOrderBookAsync(string symbol, int depth, CancellationToken cancellationToken) => throw new ProviderException("PROVIDER_UNAVAILABLE", "Unavailable in test.");
+    }
+
+    private sealed class InMemoryProtectedSecretStore : IProtectedSecretStore
+    {
+        private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
+        public bool CanPersist => true;
+        public Task SaveAsync(string id, string value, CancellationToken cancellationToken) { _values[id] = value; return Task.CompletedTask; }
+        public Task<string?> LoadAsync(string id, CancellationToken cancellationToken) => Task.FromResult(_values.GetValueOrDefault(id));
+        public Task DeleteAsync(string id, CancellationToken cancellationToken) { _values.Remove(id); return Task.CompletedTask; }
     }
 }

@@ -16,6 +16,8 @@ Version 1.1 turns the product into a Live-oriented operator console without expa
 
 Version 1.2 makes exchange operations observable: current positions, orders, fills, protection, exchange-returned history, TradeRelay-observed lifecycle events, reconciliation, and grouped safe runtime errors remain explicitly sourced and reviewable.
 
+Version 1.3 pairs local agent clients through scoped OAuth and installs one canonical operator skill across Codex, Claude Code, and Gemini CLI. Read & Plan is the default; Trade is a deliberate re-pairing decision and still cannot enable trading or bypass desktop approvals, audit, gates, or reconciliation.
+
 ## Brand Personality
 
 Calm, precise, protective. The product should communicate expert confidence without trading hype, alarm fatigue, or decorative complexity.

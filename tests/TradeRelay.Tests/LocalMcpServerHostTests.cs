@@ -95,7 +95,7 @@ public sealed class LocalMcpServerHostTests
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
         Assert.Equal(context.Metadata.Version, client.ServerInfo.Version);
-        Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("local operator-controlled trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
         McpClientTool statusTool = Assert.Single(tools, tool => tool.Name == "get_system_status");

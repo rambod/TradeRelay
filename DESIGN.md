@@ -33,6 +33,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Keep exchange-returned history and TradeRelay-observed lifecycle history visibly labeled; never imply that observation reconstructs earlier account activity.
 - Operations uses compact tabular rows with textual Long/Short direction, while Error Center groups stable safe codes with recovery guidance.
 - Use a focused Settings form for MCP lifecycle, application paths, diagnostics, and release identity.
+- Agent-client installation is an operator-reviewed change showing the exact argument-array command, target paths, requested scopes, and an acknowledgment before mutation.
 - Avoid nested cards; borders define only genuine panels or grouped workflows.
 
 ## Components
@@ -47,6 +48,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Destructive Live action confirmations share the compact Approvals list/detail pattern rather than introducing another page.
 - Validation messages sit directly below the affected group and use actionable language.
 - Production loading, empty, and failure states explain the next safe operator action and never disappear silently.
+- Pairing requests and installed-client status use compact operational lists rather than promotional cards; legacy bearer controls remain visually secondary.
 
 ## Motion
 

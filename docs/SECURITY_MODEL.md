@@ -11,6 +11,14 @@ TradeRelay is a local control plane for exchange access. It reduces accidental o
 - Diagnostics exports contain non-secret runtime health, risk settings, bounded safe errors, and package versions. They exclude raw audit entries and log files and receive a final forbidden-field/value scan before atomic write.
 - API keys with withdrawal permission are rejected. Read/write, unbound, master-account, broad-permission, and expiring keys are shown as explicit warnings.
 
+## MCP authentication and client scopes
+
+The preferred authentication flow uses loopback OAuth discovery, dynamic registration, Authorization Code with PKCE-S256, exact redirect and state binding, short-lived access tokens, rotating protected refresh-token hashes, and revocation. Pairing requests expire after five minutes, codes after 60 seconds, access tokens after 15 minutes, and refresh credentials after 30 inactive days.
+
+Scopes are enforced at the MCP boundary: `traderelay.read` for inspection, `traderelay.plan` for risk and preparation, and `traderelay.trade` for writes. New pairings default to Read & Plan. Trade requires explicit desktop approval and cannot bypass environment gating, trading enablement, plan/action approval, write leases, mandatory audit, or reconciliation. The in-memory legacy bearer token remains available only as Advanced compatibility.
+
+Client installers preview exact commands and targets, pass no secrets in arguments, reject conflicting `traderelay` entries, and uninstall only files marked as TradeRelay-owned.
+
 ## Trading enablement
 
 Every application launch begins with trading disabled. Demo and Live must be enabled separately from the desktop after the MCP server, credentials, account access, risk settings, audit storage, and reconciliation path pass readiness checks.

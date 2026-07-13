@@ -29,6 +29,7 @@ internal sealed class LocalMcpServerHost(
     AuditLogService auditLog,
     SafeLogService safeLog,
     IExchangeProviderRegistry providerRegistry,
+    OAuthPairingService oauthPairing,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -252,6 +253,7 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(auditLog);
         builder.Services.AddSingleton(safeLog);
         builder.Services.AddSingleton<IExchangeProviderRegistry>(providerRegistry);
+        builder.Services.AddSingleton(oauthPairing);
 
         builder.Services
             .AddMcpServer(mcp =>
@@ -275,6 +277,7 @@ internal sealed class LocalMcpServerHost(
         WebApplication application = builder.Build();
         application.UseHostFiltering();
         application.UseMiddleware<McpSecurityMiddleware>();
+        application.MapTradeRelayOAuth(oauthPairing);
         application.MapMcp("/mcp");
 
         return application;

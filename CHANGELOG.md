@@ -2,6 +2,22 @@
 
 All notable changes are documented here. TradeRelay uses semantic versioning; milestone tags before `1.0.0` are development releases.
 
+## [1.3.0] - 2026-07-13
+
+### Added
+
+- Loopback MCP OAuth discovery, dynamic client registration, Authorization Code with PKCE-S256, exact redirect/state validation, rotating refresh credentials, revocation, and `traderelay.read`, `traderelay.plan`, and `traderelay.trade` scope enforcement.
+- Agent Clients workspace for Codex, Claude Code, and Gemini CLI detection, command/target preview, installation, repair, re-pairing, revocation, and ownership-safe uninstall.
+- Canonical `traderelay-operator` Agent Skill with status-first inspection, explicit exchange/environment selection, desktop approval boundaries, and post-write reconciliation.
+
+### Changed
+
+- New installations prefer OAuth Read & Plan pairing. Trade scope requires explicit desktop approval; the legacy session bearer token remains under Advanced compatibility.
+
+### Security
+
+- Client installers use argument arrays, never pass secrets through process arguments or logs, refuse conflicting entries, and remove only TradeRelay-owned skill files.
+
 ## [1.2.0] - 2026-07-13
 
 ### Added

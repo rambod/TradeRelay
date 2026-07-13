@@ -2,7 +2,7 @@
 
 <img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="128" height="128">
 
-TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.2.0` adds normalized position/order/fill observation, lifecycle reconciliation, retained activity history, and a secret-free Error Center while Bybit remains the only connected and write-capable adapter.
+TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.3.0` adds scoped OAuth pairing, direct Codex/Claude Code/Gemini CLI installation, and the canonical `traderelay-operator` skill while Bybit remains the only connected and write-capable adapter.
 
 TradeRelay is not a hosted trading service, autonomous strategy, signal provider, or financial adviser. It does not persist trading enablement, blindly retry ambiguous submissions, or clean up exchange orders when the application stops.
 
@@ -43,7 +43,7 @@ Official portable builds are self-contained, untrimmed, non-AOT, and available f
 | Windows | Windows 11 24H2+ | Portable ZIP |
 | Linux | Ubuntu 24.04 under X11 or XWayland | Portable `.tar.gz` |
 
-Codex and Claude Code are documented MCP clients. Other local clients may work when they support Streamable HTTP plus an environment-derived bearer header.
+Codex, Claude Code, and Gemini CLI are supported local MCP clients. TradeRelay can preview and install its MCP entry and operator skill for each client, then pair it with OAuth. Other local clients may work when they support Streamable HTTP OAuth or an environment-derived bearer header.
 
 ## Install and verify
 
@@ -53,7 +53,7 @@ Download the archive for your platform plus `SHA256SUMS` from the GitHub Release
 sha256sum -c SHA256SUMS
 ```
 
-On macOS, `shasum -a 256 TradeRelay-1.2.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.2.0-win-x64.zip -Algorithm SHA256`.
+On macOS, `shasum -a 256 TradeRelay-1.3.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.3.0-win-x64.zip -Algorithm SHA256`.
 
 Packages clearly report their signing state in `release-metadata.json`. Unsigned builds are permitted when maintainers have not configured signing credentials; the operating system may show an unverified-publisher warning. Do not bypass a warning unless the checksum matches the official release.
 
@@ -66,8 +66,8 @@ Linux archives install nothing automatically. Extract the archive, read `README-
 3. Add a separate Bybit Demo API key without withdrawal permission. Session-only storage is the default.
 4. Test and save the connection.
 5. Review Risk settings.
-6. Start the local MCP server and rotate/copy the bearer token if needed.
-7. Configure your local client with `TRADERELAY_MCP_TOKEN` using [Codex setup](docs/CODEX_SETUP.md) or [Claude Code setup](docs/CLAUDE_CODE_SETUP.md).
+6. Start the local MCP server.
+7. In **Connections → Agent clients**, preview and install Codex, Claude Code, or Gemini CLI, then approve the OAuth pairing with Read & Plan scopes. Use the legacy bearer token under Advanced only when a client cannot pair.
 8. Prepare and review simulated plans before explicitly enabling Demo trading.
 
 For Live, select Live credentials, verify every warning, review the complete risk summary, and use the exact desktop confirmation. Use **Disable New Trading Actions** whenever you no longer need writes.
@@ -88,13 +88,15 @@ Diagnostics exports exclude credentials, tokens, authorization data, signatures,
 
 ## MCP setup
 
-Set the token in the client process environment without writing its value into client configuration:
+OAuth pairing is the preferred authentication path. TradeRelay discovers local Codex, Claude Code, and Gemini CLI installations, previews every command and target, and installs only after explicit confirmation. New pairings receive Read & Plan scopes; Trade requires deliberate re-pairing and never bypasses desktop trading enablement or approval.
+
+For legacy clients, set the compatibility token in the client process environment without writing its value into client configuration:
 
 ```bash
 export TRADERELAY_MCP_TOKEN='paste-the-current-token'
 ```
 
-The default endpoint is `http://127.0.0.1:5050/mcp`. Settings can change the stopped server port from `1024` through `65535` or enable automatic MCP startup. Automatic startup never enables trading.
+The default endpoint is `http://127.0.0.1:5050/mcp`. Settings can change the stopped server port from `1024` through `65535` or enable automatic MCP startup. Automatic startup never enables trading. See [Codex](docs/CODEX_SETUP.md), [Claude Code](docs/CLAUDE_CODE_SETUP.md), and [Gemini CLI](docs/GEMINI_CLI_SETUP.md) setup.
 
 ## Development
 
@@ -120,6 +122,7 @@ src/TradeRelay.Desktop/         Avalonia shell, in-process MCP host, and applica
 src/TradeRelay.Core/            Exchange-neutral domain, settings, risk, and safety contracts
 src/TradeRelay.Providers.Bybit/ Bybit adapter boundary; all Bybit.Net types remain here
 tests/TradeRelay.Tests/         Unit and loopback integration tests
+integrations/skills/            Canonical cross-client TradeRelay operator skill
 eng/                            Reproducible scans, manifests, and packaging scripts
 packaging/                      Portable-platform metadata
 ```
@@ -128,7 +131,7 @@ See [development](docs/DEVELOPMENT.md) and [contributing](CONTRIBUTING.md) for t
 
 ## Release status
 
-Current version: `1.2.0`
+Current version: `1.3.0`
 
 | Milestone | Version |
 | --- | --- |
@@ -141,6 +144,7 @@ Current version: `1.2.0`
 | Production-ready open-source release | `1.0.0` |
 | Operator console and provider foundation | `1.1.0` |
 | Operations lifecycle audit and Error Center | `1.2.0` |
+| OAuth pairing, direct client installation, and operator skill | `1.3.0` |
 
 Release maintainers should follow [the release procedure](docs/RELEASE.md). Automated real-Live write tests are prohibited.
 

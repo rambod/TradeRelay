@@ -75,7 +75,8 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         IClipboardService clipboardService,
         IUiDispatcher uiDispatcher,
         TimeProvider timeProvider,
-        OperationsViewModel? operations = null)
+        OperationsViewModel? operations = null,
+        AgentClientsViewModel? agentClients = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _serverHost = serverHost ?? throw new ArgumentNullException(nameof(serverHost));
@@ -106,6 +107,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         Activity = activity;
         Settings = settingsViewModel;
         Operations = operations ?? new OperationsViewModel(connectionManager, auditLog, uiDispatcher, timeProvider);
+        AgentClients = agentClients;
     }
 
     /// <summary>
@@ -144,6 +146,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     public ActivityViewModel Activity { get; }
     public SettingsViewModel Settings { get; }
     public OperationsViewModel Operations { get; }
+    public AgentClientsViewModel? AgentClients { get; }
 
     public IReadOnlyList<TradingEnvironment> Environments { get; } = Enum.GetValues<TradingEnvironment>();
 
@@ -452,6 +455,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         Activity.Dispose();
         Settings.Dispose();
         Operations.Dispose();
+        AgentClients?.Dispose();
         CancellationTokenSource? cancellation = Interlocked.Exchange(ref _messageClearCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();

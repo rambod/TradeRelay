@@ -1,0 +1,13 @@
+interface:
+  display_name: "TradeRelay Operator"
+  short_description: "Operate TradeRelay with explicit safety checks"
+  default_prompt: "Use $traderelay-operator to inspect exchange status and prepare a guarded trading plan."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "traderelay"
+      description: "Local TradeRelay operator MCP server"
+      transport: "streamable_http"
+      url: "http://127.0.0.1:5050/mcp"
+policy:
+  allow_implicit_invocation: true

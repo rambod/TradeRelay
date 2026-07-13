@@ -57,6 +57,8 @@ internal static class Program
             OperatingSystem.IsWindows() ? new WindowsProtectedCredentialStore(services.GetRequiredService<WindowsProtectedSecretStore>()) :
             new LinuxSecretServiceCredentialStore(services.GetRequiredService<LinuxSecretServiceSecretStore>()));
         builder.Services.AddSingleton<CredentialStoreCoordinator>();
+        builder.Services.AddSingleton<OAuthPairingService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<OAuthPairingService>());
         builder.Services.AddSingleton<IExchangeProviderFactory, BybitExchangeProviderFactory>();
         builder.Services.AddSingleton<IExchangeProviderRegistry, ExchangeProviderRegistry>();
         builder.Services.AddSingleton<RiskEngine>();
@@ -84,12 +86,16 @@ internal static class Program
         builder.Services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         builder.Services.AddSingleton<IDesktopShellService, DesktopShellService>();
         builder.Services.AddSingleton<IDiagnosticsExporter, DiagnosticsExporter>();
+        builder.Services.AddSingleton<IClientProcessRunner, ClientProcessRunner>();
+        builder.Services.AddSingleton<IClientFileSystem, ClientFileSystem>();
+        builder.Services.AddSingleton<AgentClientInstaller>();
         builder.Services.AddSingleton<App>();
         builder.Services.AddSingleton<RiskViewModel>();
         builder.Services.AddSingleton<ApprovalsViewModel>();
         builder.Services.AddSingleton<ActivityViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
         builder.Services.AddSingleton<OperationsViewModel>();
+        builder.Services.AddSingleton<AgentClientsViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));
