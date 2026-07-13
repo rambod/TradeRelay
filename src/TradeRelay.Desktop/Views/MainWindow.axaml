@@ -107,20 +107,7 @@
         </StackPanel>
       </ScrollViewer>
 
-      <ScrollViewer IsVisible="{Binding IsOperationsSelected}">
-        <StackPanel Margin="26" Spacing="18">
-          <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Operations"/><TextBlock Classes="muted" Text="Connected exchange state without a desktop order ticket."/></StackPanel>
-          <Border Classes="panel" Padding="20"><StackPanel Spacing="16">
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="24">
-              <StackPanel><TextBlock Classes="muted" Text="POSITIONS"/><TextBlock FontSize="28" FontWeight="SemiBold" Text="{Binding OpenPositionCount}"/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Classes="muted" Text="OPEN ORDERS"/><TextBlock FontSize="28" FontWeight="SemiBold" Text="{Binding OpenOrderCount}"/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Classes="muted" Text="RECONCILIATION"/><TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding StreamHealth}"/></StackPanel>
-            </Grid>
-            <Separator Background="{DynamicResource BorderBrush}"/>
-            <TextBlock Classes="muted" Text="Position, order, fill, and protection lifecycle details arrive in the next release. This workspace already reads the active provider session and never exposes a desktop placement path." TextWrapping="Wrap"/>
-          </StackPanel></Border>
-        </StackPanel>
-      </ScrollViewer>
+      <Grid IsVisible="{Binding IsOperationsSelected}"><localViews:OperationsView DataContext="{Binding Operations}"/></Grid>
 
       <ScrollViewer IsVisible="{Binding IsCredentialsSelected}">
         <StackPanel Margin="26" Spacing="20">

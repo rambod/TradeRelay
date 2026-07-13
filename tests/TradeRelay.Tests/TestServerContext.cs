@@ -112,6 +112,7 @@ internal sealed class TestServerContext : IAsyncDisposable
             TradingControl,
             AuditLog,
             SafeLog,
+            new ExchangeProviderRegistry([providerFactory]),
             logger);
     }
 

@@ -30,6 +30,15 @@ public interface ITradingAccountProvider
     Task<ApiCredentialInfo> GetCredentialInfoAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>Provides bounded normalized order and execution history.</summary>
+public interface IExchangeHistoryProvider
+{
+    /// <summary>Gets recent exchange-returned order history.</summary>
+    Task<IReadOnlyList<HistoricalOrder>> GetOrderHistoryAsync(ExchangeHistoryQuery query, CancellationToken cancellationToken);
+    /// <summary>Gets recent exchange-returned execution history.</summary>
+    Task<IReadOnlyList<HistoricalExecution>> GetExecutionHistoryAsync(ExchangeHistoryQuery query, CancellationToken cancellationToken);
+}
+
 /// <summary>Provides normalized exchange write operations.</summary>
 public interface IExchangeTradingProvider
 {
@@ -94,4 +103,6 @@ public interface IExchangeProviderConnection : IAsyncDisposable
     IExchangeTradingProvider Trading { get; }
     /// <summary>Gets the private stream.</summary>
     IExchangeStream Stream { get; }
+    /// <summary>Gets exchange-returned history when supported.</summary>
+    IExchangeHistoryProvider? History => null;
 }

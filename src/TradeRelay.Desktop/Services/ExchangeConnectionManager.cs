@@ -27,6 +27,7 @@ internal sealed class ExchangeConnectionManager(
     public ITradingAccountProvider? Account => Volatile.Read(ref _connection)?.Account;
     public IExchangeTradingProvider? Trading => Volatile.Read(ref _connection)?.Trading;
     public IExchangeStream? Stream => Volatile.Read(ref _connection)?.Stream;
+    public IExchangeHistoryProvider? History => Volatile.Read(ref _connection)?.History;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

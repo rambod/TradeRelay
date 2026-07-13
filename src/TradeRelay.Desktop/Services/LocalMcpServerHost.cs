@@ -28,6 +28,7 @@ internal sealed class LocalMcpServerHost(
     TradingControlService tradingControl,
     AuditLogService auditLog,
     SafeLogService safeLog,
+    IExchangeProviderRegistry providerRegistry,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -249,6 +250,8 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(orderExecutionService);
         builder.Services.AddSingleton(tradingControl);
         builder.Services.AddSingleton(auditLog);
+        builder.Services.AddSingleton(safeLog);
+        builder.Services.AddSingleton<IExchangeProviderRegistry>(providerRegistry);
 
         builder.Services
             .AddMcpServer(mcp =>
@@ -266,7 +269,8 @@ internal sealed class LocalMcpServerHost(
             .WithTools<MarketTools>()
             .WithTools<AccountTools>()
             .WithTools<RiskTools>()
-            .WithTools<TradingTools>();
+            .WithTools<TradingTools>()
+            .WithTools<OperationsTools>();
 
         WebApplication application = builder.Build();
         application.UseHostFiltering();

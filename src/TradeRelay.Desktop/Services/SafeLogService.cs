@@ -31,6 +31,7 @@ internal sealed class SafeLogService(
     private readonly List<SafeDiagnosticError> _errors = [];
 
     public string? LastFailure { get; private set; }
+    public event EventHandler<SafeDiagnosticError>? ErrorWritten;
     public string DirectoryPath => paths.LogsDirectory;
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -112,6 +113,7 @@ internal sealed class SafeLogService(
             _errors.Add(entry);
             if (_errors.Count > ErrorLimit) _errors.RemoveRange(0, _errors.Count - ErrorLimit);
         }
+        try { ErrorWritten?.Invoke(this, entry); } catch { }
     }
 
     private void RetainLatestFiles()

@@ -8,17 +8,19 @@ internal sealed class SuccessfulTestProviderFactory(
     StubTradingProvider? trading = null,
     IReadOnlyList<PositionSnapshot>? positions = null,
     IReadOnlyList<OrderSnapshot>? orders = null,
-    TickerSnapshot? ticker = null) : IExchangeProviderFactory
+    TickerSnapshot? ticker = null,
+    IExchangeHistoryProvider? history = null) : IExchangeProviderFactory
 {
     public string ProviderName => "Bybit";
     public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new MarketData(ticker);
-    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => new Connection(environment, readOnly, trading ?? new StubTradingProvider(), positions ?? [], orders ?? []);
+    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => new Connection(environment, readOnly, trading ?? new StubTradingProvider(), positions ?? [], orders ?? [], history);
 
-    private sealed class Connection(TradingEnvironment environment, bool readOnly, StubTradingProvider trading, IReadOnlyList<PositionSnapshot> positions, IReadOnlyList<OrderSnapshot> orders) : IExchangeProviderConnection
+    private sealed class Connection(TradingEnvironment environment, bool readOnly, StubTradingProvider trading, IReadOnlyList<PositionSnapshot> positions, IReadOnlyList<OrderSnapshot> orders, IExchangeHistoryProvider? history) : IExchangeProviderConnection
     {
         public ITradingAccountProvider Account { get; } = new Account(environment, readOnly, positions, orders);
         public IExchangeTradingProvider Trading { get; } = trading;
         public IExchangeStream Stream { get; } = new Stream();
+        public IExchangeHistoryProvider? History { get; } = history;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 

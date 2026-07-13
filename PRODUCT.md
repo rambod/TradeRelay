@@ -14,6 +14,8 @@ TradeRelay makes local exchange access observable and controllable. Success mean
 
 Version 1.1 turns the product into a Live-oriented operator console without expanding the write boundary. The persistent Operations Rail keeps provider, environment, health, audit, and trading state visible while a provider registry prepares the product for concurrent read-only adapters.
 
+Version 1.2 makes exchange operations observable: current positions, orders, fills, protection, exchange-returned history, TradeRelay-observed lifecycle events, reconciliation, and grouped safe runtime errors remain explicitly sourced and reviewable.
+
 ## Brand Personality
 
 Calm, precise, protective. The product should communicate expert confidence without trading hype, alarm fatigue, or decorative complexity.

@@ -30,6 +30,8 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Default window: 1080×720; minimum supported window: 900×640.
 - Use split list/detail layouts for review workflows and grouped forms for settings.
 - Use a reverse-chronological Activity list with inline technical details for execution and audit history.
+- Keep exchange-returned history and TradeRelay-observed lifecycle history visibly labeled; never imply that observation reconstructs earlier account activity.
+- Operations uses compact tabular rows with textual Long/Short direction, while Error Center groups stable safe codes with recovery guidance.
 - Use a focused Settings form for MCP lifecycle, application paths, diagnostics, and release identity.
 - Avoid nested cards; borders define only genuine panels or grouped workflows.
 

@@ -11,27 +11,32 @@ internal sealed class MarketTools(ExchangeConnectionManager manager, AppSettings
 {
     [McpServerTool(Name = "get_ticker", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Gets a current Bybit USDT perpetual ticker snapshot.")]
-    public Task<ToolResult<TickerSnapshot>> GetTickerAsync([Description("USDT perpetual symbol, for example BTCUSDT")] string symbol, CancellationToken cancellationToken) =>
-        ToolResponse.RunAsync(ct => manager.MarketData.GetTickerAsync(symbol, ct), "Ticker retrieved.", settings.Bybit.Environment, timeProvider, cancellationToken);
+    public Task<ToolResult<TickerSnapshot>> GetTickerAsync([Description("USDT perpetual symbol, for example BTCUSDT")] string symbol, string? exchange = null, CancellationToken cancellationToken = default) =>
+        RunAsync(ct => manager.MarketData.GetTickerAsync(symbol, ct), "Ticker retrieved.", exchange, cancellationToken);
 
     [McpServerTool(Name = "get_candles", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Gets oldest-first Bybit USDT perpetual candles.")]
-    public Task<ToolResult<IReadOnlyList<Candle>>> GetCandlesAsync(string symbol, string interval = "15m", int limit = 100, CancellationToken cancellationToken = default)
+    public Task<ToolResult<IReadOnlyList<Candle>>> GetCandlesAsync(string symbol, string interval = "15m", int limit = 100, string? exchange = null, CancellationToken cancellationToken = default)
     {
         if (!TryParseInterval(interval, out CandleInterval parsed))
             return Task.FromResult(ToolResponse.Failure<IReadOnlyList<Candle>>("INVALID_INPUT", "Supported intervals: 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d, 1w.", settings.Bybit.Environment, timeProvider));
-        return ToolResponse.RunAsync(ct => manager.MarketData.GetCandlesAsync(symbol, parsed, limit, ct), "Candles retrieved.", settings.Bybit.Environment, timeProvider, cancellationToken);
+        return RunAsync(ct => manager.MarketData.GetCandlesAsync(symbol, parsed, limit, ct), "Candles retrieved.", exchange, cancellationToken);
     }
 
     [McpServerTool(Name = "get_instrument_info", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Gets precision and limit metadata for a Bybit USDT perpetual instrument.")]
-    public Task<ToolResult<InstrumentInfo>> GetInstrumentInfoAsync(string symbol, CancellationToken cancellationToken) =>
-        ToolResponse.RunAsync(ct => manager.MarketData.GetInstrumentInfoAsync(symbol, ct), "Instrument information retrieved.", settings.Bybit.Environment, timeProvider, cancellationToken);
+    public Task<ToolResult<InstrumentInfo>> GetInstrumentInfoAsync(string symbol, string? exchange = null, CancellationToken cancellationToken = default) =>
+        RunAsync(ct => manager.MarketData.GetInstrumentInfoAsync(symbol, ct), "Instrument information retrieved.", exchange, cancellationToken);
 
     [McpServerTool(Name = "get_order_book", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Gets a Bybit USDT perpetual order-book snapshot with a maximum depth of 50.")]
-    public Task<ToolResult<OrderBookSnapshot>> GetOrderBookAsync(string symbol, int depth = 25, CancellationToken cancellationToken = default) =>
-        ToolResponse.RunAsync(ct => manager.MarketData.GetOrderBookAsync(symbol, depth, ct), "Order book retrieved.", settings.Bybit.Environment, timeProvider, cancellationToken);
+    public Task<ToolResult<OrderBookSnapshot>> GetOrderBookAsync(string symbol, int depth = 25, string? exchange = null, CancellationToken cancellationToken = default) =>
+        RunAsync(ct => manager.MarketData.GetOrderBookAsync(symbol, depth, ct), "Order book retrieved.", exchange, cancellationToken);
+
+    private Task<ToolResult<T>> RunAsync<T>(Func<CancellationToken, Task<T>> action, string message, string? exchange, CancellationToken cancellationToken) =>
+        !string.IsNullOrWhiteSpace(exchange) && !exchange.Trim().Equals("bybit", StringComparison.OrdinalIgnoreCase)
+            ? Task.FromResult(ToolResponse.Failure<T>("EXCHANGE_NOT_FOUND", "The requested exchange is not registered.", settings.Bybit.Environment, timeProvider))
+            : ToolResponse.RunAsync(action, message, settings.Bybit.Environment, timeProvider, cancellationToken);
 
     private static bool TryParseInterval(string value, out CandleInterval interval)
     {

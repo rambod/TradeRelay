@@ -2,6 +2,25 @@
 
 All notable changes are documented here. TradeRelay uses semantic versioning; milestone tags before `1.0.0` are development releases.
 
+## [1.2.0] - 2026-07-13
+
+### Added
+
+- Operations workspace with Positions, Orders, Fills, and Protection views; explicit Long/Short labels; exposure, PnL, leverage, liquidation distance, coverage, and reconciliation status.
+- Exchange-neutral history contracts and Bybit order/execution history mapping.
+- Versioned lifecycle events, REST baseline capture, private-stream observation, change-only reconciliation, and 30-second reconciliation checks.
+- Read-only MCP tools for exchanges, order history, execution history, observed position history, and grouped safe runtime errors.
+- Error Center grouped by safe code/category/provider/action/exception type with counts, timestamps, correlation IDs, and recovery guidance.
+
+### Changed
+
+- Audit loading accepts legacy and schema-v2 events, supports bounded historical paging, and retains daily files until exact-phrase operator deletion.
+- Audit deletion can be date-scoped or complete and records a new safe purge event after deletion.
+
+### Security
+
+- Pre-action audit health remains a mandatory write-gate condition; runtime errors continue excluding raw messages, stacks, authenticated payloads, and secrets.
+
 ## [1.1.0] - 2026-07-13
 
 ### Added

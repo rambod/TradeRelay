@@ -1,9 +1,9 @@
 <Project>
 
   <PropertyGroup>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     <Product>TradeRelay</Product>
     <Authors>Rambod</Authors>
     <Description>A safety-first local MCP operator console for multi-exchange trading workflows.</Description>

@@ -14,12 +14,14 @@ internal sealed class BybitExchangeConnection : IExchangeProviderConnection
         _socketClient = socketClient;
         Account = new BybitTradingAccountProvider(restClient, environment, timeProvider);
         Trading = new BybitTradingProvider(restClient, timeProvider);
+        History = new BybitHistoryProvider(restClient);
         Stream = new BybitExchangeStream(socketClient, timeProvider);
     }
 
     public ITradingAccountProvider Account { get; }
     public IExchangeTradingProvider Trading { get; }
     public IExchangeStream Stream { get; }
+    public IExchangeHistoryProvider History { get; }
 
     public async ValueTask DisposeAsync()
     {

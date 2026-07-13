@@ -108,7 +108,7 @@ public sealed class LocalMcpServerHostTests
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
         Assert.Contains("TradingDisabled", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);
-        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals", "execute_prepared_order", "cancel_order", "cancel_all_orders", "close_position", "set_trading_stop", "get_live_action_confirmation", "get_pending_live_confirmations"];
+        string[] expected = ["test_bybit_connection", "get_ticker", "get_candles", "get_instrument_info", "get_order_book", "get_account_summary", "get_wallet_balances", "get_positions", "get_open_orders", "get_risk_settings", "calculate_position_size", "validate_order", "prepare_order", "get_prepared_order", "get_pending_approvals", "execute_prepared_order", "cancel_order", "cancel_all_orders", "close_position", "set_trading_stop", "get_live_action_confirmation", "get_pending_live_confirmations", "get_exchanges", "get_order_history", "get_execution_history", "get_position_history", "get_runtime_errors"];
         foreach (string name in expected) Assert.Contains(tools, tool => tool.Name == name);
     }
 

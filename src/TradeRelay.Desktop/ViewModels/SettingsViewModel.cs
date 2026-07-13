@@ -17,6 +17,7 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly IDesktopShellService _shell;
     private readonly IDiagnosticsExporter _diagnostics;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AuditLogService? _audit;
     private int _savedPort;
     private bool _savedStartAutomatically;
 
@@ -26,6 +27,9 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _statusMessage = "Settings are saved locally and never contain credentials or bearer tokens.";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private McpServerState _serverState;
+    [ObservableProperty] private DateTimeOffset? _purgeFromUtc;
+    [ObservableProperty] private DateTimeOffset? _purgeToUtc;
+    [ObservableProperty] private string _purgeConfirmation = string.Empty;
 
     public SettingsViewModel(
         AppSettings settings,
@@ -36,7 +40,8 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
         ApplicationMetadata metadata,
         IDesktopShellService shell,
         IDiagnosticsExporter diagnostics,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        AuditLogService? audit = null)
     {
         _settings = settings;
         _settingsStore = settingsStore;
@@ -46,6 +51,7 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _shell = shell;
         _diagnostics = diagnostics;
         _dispatcher = dispatcher;
+        _audit = audit;
         _savedPort = settings.Server.Port;
         _savedStartAutomatically = settings.Server.StartAutomatically;
         _mcpPort = _savedPort.ToString(CultureInfo.InvariantCulture);
@@ -76,6 +82,7 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
     partial void OnMcpPortChanged(string value) => OnEdited();
     partial void OnStartMcpAutomaticallyChanged(bool value) => OnEdited();
     partial void OnIsBusyChanged(bool value) => NotifyCommands();
+    partial void OnPurgeConfirmationChanged(string value) => PurgeAuditCommand.NotifyCanExecuteChanged();
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync(CancellationToken cancellationToken)
@@ -168,11 +175,29 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanPurgeAudit))]
+    private async Task PurgeAuditAsync(CancellationToken cancellationToken)
+    {
+        if (_audit is null) return;
+        IsBusy = true;
+        try
+        {
+            bool success = await _audit.PurgeAsync(PurgeFromUtc is null ? null : DateOnly.FromDateTime(PurgeFromUtc.Value.UtcDateTime), PurgeToUtc is null ? null : DateOnly.FromDateTime(PurgeToUtc.Value.UtcDateTime), PurgeConfirmation, cancellationToken).ConfigureAwait(false);
+            _dispatcher.Post(() =>
+            {
+                StatusMessage = success ? "Selected audit history was deleted and a safe purge event was recorded." : "Audit history was not deleted. Type DELETE AUDIT HISTORY exactly and verify audit storage.";
+                if (success) PurgeConfirmation = string.Empty;
+            });
+        }
+        finally { _dispatcher.Post(() => IsBusy = false); }
+    }
+
     public void Dispose() => _serverHost.StateChanged -= OnServerStateChanged;
 
     private bool CanSave() => !IsBusy && IsDirty && ValidationError is null && (!IsPortDirty || IsPortEditingEnabled);
     private bool CanDiscard() => !IsBusy && IsDirty;
     private bool CanRunAction() => !IsBusy;
+    private bool CanPurgeAudit() => !IsBusy && _audit is not null && string.Equals(PurgeConfirmation, "DELETE AUDIT HISTORY", StringComparison.Ordinal);
 
     private void OnEdited()
     {
@@ -217,5 +242,6 @@ internal sealed partial class SettingsViewModel : ObservableObject, IDisposable
         DiscardCommand.NotifyCanExecuteChanged();
         RotateTokenCommand.NotifyCanExecuteChanged();
         ExportDiagnosticsCommand.NotifyCanExecuteChanged();
+        PurgeAuditCommand.NotifyCanExecuteChanged();
     }
 }

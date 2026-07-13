@@ -46,6 +46,15 @@
             </Grid>
           </StackPanel>
         </Border>
+        <Border Classes="warningPanel" Padding="22">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="warningTitle" Text="Audit history retention"/>
+            <TextBlock Classes="muted" Text="Activity is retained until you explicitly delete it. Leave both dates empty to purge all retained daily files." TextWrapping="Wrap"/>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10"><StackPanel Spacing="5"><TextBlock Classes="fieldLabel" Text="From UTC date (optional)"/><DatePicker SelectedDate="{Binding PurgeFromUtc}"/></StackPanel><StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="fieldLabel" Text="Through UTC date (optional)"/><DatePicker SelectedDate="{Binding PurgeToUtc}"/></StackPanel></Grid>
+            <TextBlock Classes="fieldLabel" Text="Type DELETE AUDIT HISTORY exactly"/><TextBox AutomationProperties.Name="Audit deletion confirmation" Text="{Binding PurgeConfirmation, Mode=TwoWay}"/>
+            <Button Classes="danger" HorizontalAlignment="Left" Command="{Binding PurgeAuditCommand}" Content="Delete selected audit history"/>
+          </StackPanel>
+        </Border>
 
         <Border Classes="panel" Padding="22">
           <StackPanel Spacing="14">

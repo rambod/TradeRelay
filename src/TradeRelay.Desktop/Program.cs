@@ -75,6 +75,8 @@ internal static class Program
         builder.Services.AddSingleton<ExchangeConnectionManager>();
         builder.Services.AddSingleton<IExchangeSessionCoordinator, ExchangeSessionCoordinator>();
         builder.Services.AddHostedService(services => services.GetRequiredService<ExchangeConnectionManager>());
+        builder.Services.AddSingleton<TradingLifecycleService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<TradingLifecycleService>());
         builder.Services.AddSingleton<LocalMcpServerHost>();
         builder.Services.AddHostedService(services =>
             services.GetRequiredService<LocalMcpServerHost>());
@@ -87,6 +89,7 @@ internal static class Program
         builder.Services.AddSingleton<ApprovalsViewModel>();
         builder.Services.AddSingleton<ActivityViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
+        builder.Services.AddSingleton<OperationsViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));

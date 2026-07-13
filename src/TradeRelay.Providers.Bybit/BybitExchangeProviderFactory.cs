@@ -15,7 +15,7 @@ public sealed class BybitExchangeProviderFactory(TimeProvider timeProvider) : IE
     public ExchangeProviderDescriptor Descriptor { get; } = new(
         new ExchangeId("bybit"),
         "Bybit",
-        ProviderCapabilities.MarketData | ProviderCapabilities.AccountRead | ProviderCapabilities.PrivateStream | ProviderCapabilities.TradingWrite,
+        ProviderCapabilities.MarketData | ProviderCapabilities.AccountRead | ProviderCapabilities.PrivateStream | ProviderCapabilities.History | ProviderCapabilities.TradingWrite,
         [TradingEnvironment.Demo, TradingEnvironment.Live],
         [
             new CredentialFieldDescriptor(ExchangeCredentials.ApiKeyField, "API key", false),

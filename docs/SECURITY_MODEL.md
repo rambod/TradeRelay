@@ -37,6 +37,8 @@ Order submission is never blindly retried. REST acknowledgement is provisional: 
 
 Exchange writes require a successful pre-action audit append. Later audit failure faults audit health and blocks subsequent writes. Audit files are append-only UTF-8 JSONL under the normal per-user application-data directory.
 
+Audit history is retained until the desktop operator explicitly deletes a UTC date range or all retained files by typing `DELETE AUDIT HISTORY` exactly. A new safe purge event is written after deletion. Exchange-returned history and TradeRelay-observed lifecycle events remain separately identified; TradeRelay does not fabricate history from before it observed an account.
+
 Shutdown disables new writes first, expires unexecuted plans and Live confirmations, permits active reconciliation for a short bounded interval, records shutdown, disconnects streams, disposes clients, and stops the local server. It never performs automatic exchange cleanup.
 
 Automatic MCP startup is an operator convenience only. A startup fault leaves the desktop open and trading disabled. Changing the stopped MCP port or rotating its token does not enable trading.
