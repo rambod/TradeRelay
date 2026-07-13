@@ -63,7 +63,7 @@ public sealed class ExchangeConnectionManagerTests
         public string ProviderName => "Bybit";
         public FakeConnection? LastConnection { get; private set; }
         public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new FakeMarketData();
-        public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials) => LastConnection = new FakeConnection(info);
+        public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => LastConnection = new FakeConnection(info);
     }
 
     private sealed class FakeConnection(ApiCredentialInfo info) : IExchangeProviderConnection

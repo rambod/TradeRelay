@@ -6,347 +6,165 @@
     xmlns:localViews="using:TradeRelay.Desktop.Views"
     x:DataType="viewModels:MainWindowViewModel"
     Title="{Binding ApplicationName}"
-    Width="1080"
-    Height="720"
-    MinWidth="900"
-    MinHeight="640"
+    Width="1080" Height="720" MinWidth="900" MinHeight="640"
     Icon="avares://TradeRelay/Assets/TradeRelay.png"
     Background="{DynamicResource AppBackgroundBrush}">
-  <Grid RowDefinitions="Auto,Auto,*">
-    <Border
-        Padding="32,20"
-        Background="#151E28"
-        BorderBrush="#2A3644"
-        BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="3">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock
-                FontSize="23"
-                FontWeight="SemiBold"
-                Foreground="#F3F6F8"
-                Text="{Binding ApplicationName}" />
-            <Border
-                Padding="8,3"
-                VerticalAlignment="Center"
-                Background="#203649"
-                CornerRadius="6">
-              <TextBlock
-                  FontSize="12"
-                  Foreground="#B9D8EF"
-                  Text="{Binding VersionLabel}" />
-            </Border>
+  <Grid RowDefinitions="64,*">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="{Binding NavigationRailWidth}" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <Border Grid.RowSpan="2" Background="{DynamicResource ShellBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="64,*,Auto">
+        <Grid Margin="18,0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Border Width="30" Height="30" CornerRadius="7" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#07151B" Text="TR" />
+          </Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" IsVisible="{Binding !IsCompactNavigation}">
+            <TextBlock FontWeight="SemiBold" Text="TradeRelay" />
+            <TextBlock Classes="muted" FontSize="11" Text="{Binding VersionLabel}" />
           </StackPanel>
-          <TextBlock
-              Classes="muted"
-              Text="{Binding DevelopmentStatus}" />
+        </Grid>
+
+        <StackPanel Grid.Row="1" Margin="10,18" Spacing="4">
+          <TextBlock Margin="10,0,0,6" Classes="muted" FontSize="11" Text="WORKSPACES" IsVisible="{Binding !IsCompactNavigation}" />
+          <Button Classes="rail" Command="{Binding ShowOverviewCommand}" Content="{Binding OverviewNavLabel}" AutomationProperties.Name="Overview" />
+          <Button Classes="rail" Command="{Binding ShowOperationsCommand}" Content="{Binding OperationsNavLabel}" AutomationProperties.Name="Operations" />
+          <Button Classes="rail" Command="{Binding ShowApprovalsCommand}" Content="{Binding ApprovalsNavLabel}" AutomationProperties.Name="Approvals" />
+          <Button Classes="rail" Command="{Binding ShowActivityCommand}" Content="{Binding ActivityNavLabel}" AutomationProperties.Name="Activity" />
+          <Separator Margin="8,12" Background="{DynamicResource BorderBrush}" />
+          <TextBlock Margin="10,0,0,6" Classes="muted" FontSize="11" Text="CONTROL" IsVisible="{Binding !IsCompactNavigation}" />
+          <Button Classes="rail" Command="{Binding ShowConnectionsCommand}" Content="{Binding ConnectionsNavLabel}" AutomationProperties.Name="Connections" />
+          <Button Classes="rail" Command="{Binding ShowRiskCommand}" Content="{Binding RiskNavLabel}" AutomationProperties.Name="Risk" />
+          <Button Classes="rail" Command="{Binding ShowSettingsCommand}" Content="{Binding SettingsNavLabel}" AutomationProperties.Name="Settings" />
         </StackPanel>
-        <Border
-            Grid.Column="1"
-            IsVisible="{Binding IsDemoEnvironment}"
-            Padding="12,7"
-            VerticalAlignment="Center"
-            Background="#203649"
-            BorderBrush="#35607B"
-            BorderThickness="1"
-            CornerRadius="8">
-          <TextBlock
-              FontWeight="SemiBold"
-              Foreground="#B9D8EF"
-              Text="{Binding HeaderSafetyState}" />
+
+        <StackPanel Grid.Row="2" Margin="18,14" Spacing="4" IsVisible="{Binding !IsCompactNavigation}">
+          <TextBlock Classes="muted" FontSize="11" Text="WRITES RESET ON LAUNCH" />
+          <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding TradingState}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Column="1" Padding="20,0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="18">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock Classes="muted" FontSize="11" Text="EXCHANGE" />
+          <TextBlock Classes="value" Text="Bybit" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Classes="muted" FontSize="11" Text="ENVIRONMENT" />
+          <TextBlock Classes="value" Text="{Binding EnvironmentStatus}" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Classes="muted" FontSize="11" Text="REST · STREAM · AUDIT" />
+          <TextBlock Classes="value" Text="{Binding HealthSummary}" />
+        </StackPanel>
+        <Border Grid.Column="4" Classes="infoBadge" IsVisible="{Binding IsDemoEnvironment}" Padding="12,7" VerticalAlignment="Center">
+          <TextBlock FontWeight="SemiBold" Text="{Binding HeaderSafetyState}" />
         </Border>
-        <Border
-            Grid.Column="1"
-            Classes="liveBadge"
-            IsVisible="{Binding IsLiveEnvironment}"
-            Padding="12,7"
-            VerticalAlignment="Center">
+        <Border Grid.Column="4" Classes="liveBadge" IsVisible="{Binding IsLiveEnvironment}" Padding="12,7" VerticalAlignment="Center">
           <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="{Binding HeaderSafetyState}" />
         </Border>
       </Grid>
     </Border>
 
-    <Border Grid.Row="1" Padding="32,10" Background="#111923" BorderBrush="#2A3644" BorderThickness="0,0,0,1">
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Classes="quiet" Command="{Binding ShowDashboardCommand}" Content="Dashboard" />
-        <Button Classes="quiet" Command="{Binding ShowCredentialsCommand}" Content="Credentials" />
-        <Button Classes="quiet" Command="{Binding ShowRiskCommand}" Content="Risk" />
-        <Button Classes="quiet" Command="{Binding ShowApprovalsCommand}" Content="Approvals" />
-        <Button Classes="quiet" Command="{Binding ShowActivityCommand}" Content="Activity" />
-        <Button Classes="quiet" Command="{Binding ShowSettingsCommand}" Content="Settings" />
-      </StackPanel>
-    </Border>
-
-    <ScrollViewer Grid.Row="2" IsVisible="{Binding IsDashboardSelected}">
-      <Grid
-          Margin="32"
-          ColumnDefinitions="2*,3*"
-          ColumnSpacing="24">
-        <StackPanel Grid.Column="0" Spacing="18">
-          <StackPanel Spacing="5">
-            <TextBlock Classes="sectionTitle" Text="Safety posture" />
-            <TextBlock
-                Classes="muted"
-                MaxWidth="420"
-                Text="Exchange writes require an explicitly enabled desktop session. Live adds mandatory startup confirmation and stricter action approval."
-                TextWrapping="Wrap" />
-          </StackPanel>
-
-          <Border
-              Padding="20"
-              Background="#151E28"
-              BorderBrush="#2A3644"
-              BorderThickness="1"
-              CornerRadius="12">
-            <StackPanel Spacing="13">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Environment" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding EnvironmentStatus}" />
-              </Grid>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Trading access" />
-                <TextBlock Grid.Column="1" Classes="value" Foreground="#8BE0BD" Text="{Binding AccessStatus}" />
-              </Grid>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Live trading" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding LiveTradingStatus}" />
-              </Grid>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Provider" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding ProviderStatus}" />
-              </Grid>
-              <Separator Background="#2A3644" />
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Open positions" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenPositionCount}" />
-              </Grid>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Open orders" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenOrderCount}" />
-              </Grid>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="muted" Text="Pending approvals" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding PendingApprovalCount}" />
-              </Grid>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="panel" Padding="18">
-            <StackPanel Spacing="10">
-              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="{Binding TradingState}"/><TextBlock Classes="muted" Text="{Binding TradingDetail}" TextWrapping="Wrap"/></StackPanel><Border Grid.Column="1" Classes="infoBadge" IsVisible="{Binding IsDemoEnvironment}" Padding="10,6"><TextBlock Text="DEMO"/></Border><Border Grid.Column="1" Classes="liveBadge" IsVisible="{Binding IsLiveEnvironment}" Padding="10,6"><TextBlock Foreground="{DynamicResource ErrorBrush}" FontWeight="SemiBold" Text="LIVE"/></Border></Grid>
-              <CheckBox IsVisible="{Binding IsDemoEnvironment}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this sends write requests to my Bybit Demo account."/>
-              <StackPanel Orientation="Horizontal" Spacing="8">
+    <Grid Grid.Row="1" Grid.Column="1">
+      <ScrollViewer IsVisible="{Binding IsDashboardSelected}">
+        <StackPanel Margin="26" Spacing="20">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Overview"/><TextBlock Classes="muted" Text="Live-grade operating posture. Exchange writes remain explicitly session-enabled."/></StackPanel>
+            <Button Grid.Column="1" Classes="danger" IsVisible="{Binding IsTradingEnabled}" Command="{Binding DisableTradingCommand}" Content="Disable New Trading Actions" />
+          </Grid>
+          <Grid ColumnDefinitions="2*,3*" ColumnSpacing="18">
+            <StackPanel Spacing="16">
+              <Border Classes="panel" Padding="18"><StackPanel Spacing="12">
+                <TextBlock FontWeight="SemiBold" Text="Safety posture"/>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Trading access"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding AccessStatus}"/></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Open positions"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenPositionCount}"/></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Open orders"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenOrderCount}"/></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Pending approvals"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding PendingApprovalCount}"/></Grid>
+                <Separator Background="{DynamicResource BorderBrush}"/>
+                <TextBlock Classes="muted" Text="{Binding TradingDetail}" TextWrapping="Wrap"/>
+                <CheckBox IsVisible="{Binding IsDemoEnvironment}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this writes to Bybit Demo."/>
                 <Button Classes="primary" IsVisible="{Binding ShowDemoEnable}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
                 <Button Classes="danger" IsVisible="{Binding ShowLiveEnable}" Command="{Binding OpenLiveEnableDialogCommand}" Content="Review and enable Live"/>
-                <Button Classes="danger" IsVisible="{Binding IsTradingEnabled}" Command="{Binding DisableTradingCommand}" Content="Disable New Trading Actions"/>
-              </StackPanel>
-              <TextBlock Classes="muted" Text="Disabling blocks new writes immediately. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/>
+              </StackPanel></Border>
+              <Border Classes="warningPanel" Padding="16"><TextBlock Classes="warningText" Text="Disabling or stopping TradeRelay blocks new writes only. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/></Border>
             </StackPanel>
-          </Border>
-
-          <Border
-              Padding="18"
-              Background="#242218"
-              BorderBrush="#635B32"
-              BorderThickness="1"
-              CornerRadius="10">
-            <StackPanel Spacing="6">
-              <TextBlock
-                  FontWeight="SemiBold"
-                  Foreground="#F1DA85"
-                  Text="Stopping is connection-only" />
-              <TextBlock
-                  Foreground="#D5CBA8"
-                  Text="Stopping TradeRelay does not cancel exchange orders, close positions, or remove stop-loss and take-profit protection."
-                  TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
-
-        <StackPanel Grid.Column="1" Spacing="18">
-          <StackPanel Spacing="5">
-            <TextBlock Classes="sectionTitle" Text="Local MCP server" />
-            <TextBlock
-                Classes="muted"
-                Text="Loopback-only Streamable HTTP with bearer authentication."
-                TextWrapping="Wrap" />
-          </StackPanel>
-
-          <Border
-              Padding="22"
-              Background="#151E28"
-              BorderBrush="#2A3644"
-              BorderThickness="1"
-              CornerRadius="12">
-            <StackPanel Spacing="17">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="3">
-                  <TextBlock Classes="muted" Text="Server state" />
-                  <TextBlock
-                      FontSize="26"
-                      FontWeight="SemiBold"
-                      Foreground="#F3F6F8"
-                      Text="{Binding ServerState}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
-                  <Button Classes="primary" Command="{Binding StartServerCommand}" Content="Start MCP" />
-                  <Button Command="{Binding StopServerCommand}" Content="Stop" />
-                </StackPanel>
+            <Border Grid.Column="1" Classes="panel" Padding="20"><StackPanel Spacing="14">
+              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="Local MCP server"/><TextBlock Classes="muted" Text="Loopback-only Streamable HTTP"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary" Command="{Binding StartServerCommand}" Content="Start MCP"/><Button Command="{Binding StopServerCommand}" Content="Stop"/></StackPanel></Grid>
+              <Separator Background="{DynamicResource BorderBrush}"/>
+              <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+                <TextBlock Classes="muted" Text="State"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding ServerState}"/>
+                <TextBlock Grid.Row="1" Classes="muted" Text="Endpoint"/><TextBlock Grid.Row="1" Grid.Column="1" Classes="value" Text="{Binding Endpoint}" TextWrapping="Wrap"/>
+                <TextBlock Grid.Row="2" Classes="muted" Text="Authentication"/><TextBlock Grid.Row="2" Grid.Column="1" Classes="value" Text="{Binding AuthenticationStatus}"/>
+                <TextBlock Grid.Row="3" Classes="muted" Text="Last error"/><TextBlock Grid.Row="3" Grid.Column="1" Classes="value" Text="{Binding LastError}" TextWrapping="Wrap"/>
               </Grid>
-
-              <Separator Background="#2A3644" />
-
-              <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
-                <TextBlock Classes="muted" Text="Endpoint" />
-                <TextBlock Grid.Column="1" Classes="value" Text="{Binding Endpoint}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="1" Classes="muted" Text="Port" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Classes="value" Text="{Binding Port}" />
-                <TextBlock Grid.Row="2" Classes="muted" Text="Authentication" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Classes="value" Text="{Binding AuthenticationStatus}" />
-                <TextBlock Grid.Row="3" Classes="muted" Text="Sessions" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Classes="value" Text="{Binding SessionStatus}" />
-                <TextBlock Grid.Row="4" Classes="muted" Text="Last error" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Classes="value" Text="{Binding LastError}" TextWrapping="Wrap" />
-              </Grid>
-
-              <Separator Background="#2A3644" />
-
-              <StackPanel Spacing="9">
-                <TextBlock FontWeight="SemiBold" Foreground="#E7EDF3" Text="Session bearer token" />
-                <TextBox
-                    Padding="12,10"
-                    Background="#0E141B"
-                    BorderBrush="#344354"
-                    FontFamily="Menlo,Consolas,monospace"
-                    IsReadOnly="True"
-                    Text="{Binding DisplayedToken}" />
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="quiet" Command="{Binding ToggleTokenVisibilityCommand}" Content="{Binding TokenVisibilityAction}" />
-                  <Button Classes="quiet" Command="{Binding CopyTokenCommand}" Content="Copy token" />
-                  <Button Classes="quiet" Command="{Binding RotateTokenCommand}" Content="Rotate token" />
-                </StackPanel>
-              </StackPanel>
-
-              <StackPanel Spacing="9">
-                <TextBlock FontWeight="SemiBold" Foreground="#E7EDF3" Text="Client setup" />
-                <TextBlock
-                    Classes="muted"
-                    Text="Copied configuration references TRADERELAY_MCP_TOKEN and never embeds the token value."
-                    TextWrapping="Wrap" />
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Command="{Binding CopyCodexConfigCommand}" Content="Copy Codex config" />
-                  <Button Command="{Binding CopyClaudeCodeCommand}" Content="Copy Claude Code command" />
-                </StackPanel>
-              </StackPanel>
-            </StackPanel>
-          </Border>
-
-          <TextBlock
-              MinHeight="22"
-              Foreground="#8BE0BD"
-              Text="{Binding ActionMessage}"
-              TextWrapping="Wrap" />
+              <TextBlock Classes="statusText" Text="{Binding ActionMessage}" TextWrapping="Wrap"/>
+            </StackPanel></Border>
+          </Grid>
         </StackPanel>
-      </Grid>
-    </ScrollViewer>
+      </ScrollViewer>
 
-    <ScrollViewer Grid.Row="2" IsVisible="{Binding IsCredentialsSelected}">
-      <Grid Margin="32" ColumnDefinitions="3*,2*" ColumnSpacing="24">
-        <StackPanel Grid.Column="0" Spacing="18">
-          <StackPanel Spacing="5">
-            <TextBlock Classes="sectionTitle" Text="Bybit credentials" />
-            <TextBlock Classes="muted" Text="Credentials are entered only here and are never exposed through MCP tools." TextWrapping="Wrap" />
-          </StackPanel>
-          <Border Padding="22" Background="#151E28" BorderBrush="#2A3644" BorderThickness="1" CornerRadius="12">
-            <StackPanel Spacing="14">
-              <TextBlock Classes="muted" Text="Environment" />
-              <ComboBox ItemsSource="{Binding Environments}" SelectedItem="{Binding SelectedEnvironment, Mode=TwoWay}" />
-              <TextBlock Classes="muted" Text="API key" />
-              <TextBox Text="{Binding ApiKey, Mode=TwoWay}" PlaceholderText="Enter API key" />
-              <TextBlock Classes="muted" Text="API secret" />
-              <TextBox Text="{Binding ApiSecret, Mode=TwoWay}" PasswordChar="●" PlaceholderText="Enter API secret" />
-              <CheckBox Content="Remember credentials on this device" IsChecked="{Binding RememberCredentials, Mode=TwoWay}" />
-              <TextBlock Classes="muted" Text="Protected storage is used when available. Otherwise TradeRelay clearly falls back to this session only." TextWrapping="Wrap" />
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Command="{Binding TestConnectionCommand}" Content="Test connection" />
-                <Button Classes="primary" Command="{Binding SaveCredentialsCommand}" Content="Save" />
-                <Button Command="{Binding DeleteCredentialsCommand}" Content="Delete" />
-              </StackPanel>
-              <TextBlock Foreground="#8BE0BD" Text="{Binding CredentialActionStatus}" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
+      <ScrollViewer IsVisible="{Binding IsOperationsSelected}">
+        <StackPanel Margin="26" Spacing="18">
+          <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Operations"/><TextBlock Classes="muted" Text="Connected exchange state without a desktop order ticket."/></StackPanel>
+          <Border Classes="panel" Padding="20"><StackPanel Spacing="16">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="24">
+              <StackPanel><TextBlock Classes="muted" Text="POSITIONS"/><TextBlock FontSize="28" FontWeight="SemiBold" Text="{Binding OpenPositionCount}"/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Classes="muted" Text="OPEN ORDERS"/><TextBlock FontSize="28" FontWeight="SemiBold" Text="{Binding OpenOrderCount}"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Classes="muted" Text="RECONCILIATION"/><TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding StreamHealth}"/></StackPanel>
+            </Grid>
+            <Separator Background="{DynamicResource BorderBrush}"/>
+            <TextBlock Classes="muted" Text="Position, order, fill, and protection lifecycle details arrive in the next release. This workspace already reads the active provider session and never exposes a desktop placement path." TextWrapping="Wrap"/>
+          </StackPanel></Border>
         </StackPanel>
+      </ScrollViewer>
 
-        <StackPanel Grid.Column="1" Spacing="18">
-          <TextBlock Classes="sectionTitle" Text="Connection safety" />
-          <Border Padding="20" Background="#151E28" BorderBrush="#2A3644" BorderThickness="1" CornerRadius="12">
-            <StackPanel Spacing="12">
-              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Saved key" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding SavedKeyPreview}" /></Grid>
-              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Storage" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding CredentialStorageStatus}" /></Grid>
-              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="REST" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding RestHealth}" /></Grid>
-              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Private stream" /><TextBlock Grid.Column="1" Classes="value" Text="{Binding StreamHealth}" /></Grid>
-              <Separator Background="#2A3644" />
-              <TextBlock FontWeight="SemiBold" Foreground="#E7EDF3" Text="Permission summary" />
-              <TextBlock Classes="muted" Text="{Binding PermissionSummary}" TextWrapping="Wrap" />
-              <TextBlock FontWeight="SemiBold" Foreground="#F1DA85" Text="Warnings" />
-              <TextBlock Foreground="#D5CBA8" Text="{Binding CredentialWarnings}" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-          <Border Padding="18" Background="#351A1D" BorderBrush="#7A343B" BorderThickness="1" CornerRadius="10">
-            <TextBlock Foreground="#F2A8AE" Text="TradeRelay rejects every API key with withdrawal permission. Read/write keys can enable only their matching environment after all session safety checks pass." TextWrapping="Wrap" />
-          </Border>
+      <ScrollViewer IsVisible="{Binding IsCredentialsSelected}">
+        <StackPanel Margin="26" Spacing="20">
+          <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Connections"/><TextBlock Classes="muted" Text="Exchange credentials and local agent connectivity in one controlled workspace."/></StackPanel>
+          <Grid ColumnDefinitions="3*,2*" ColumnSpacing="18">
+            <Border Classes="panel" Padding="20"><StackPanel Spacing="12">
+              <TextBlock FontWeight="SemiBold" Text="Bybit account"/><ComboBox ItemsSource="{Binding Environments}" SelectedItem="{Binding SelectedEnvironment, Mode=TwoWay}"/>
+              <TextBox Text="{Binding ApiKey, Mode=TwoWay}" PlaceholderText="API key"/>
+              <TextBox Text="{Binding ApiSecret, Mode=TwoWay}" PasswordChar="●" PlaceholderText="API secret"/>
+              <CheckBox Content="Remember this environment in protected storage" IsChecked="{Binding RememberCredentials, Mode=TwoWay}"/>
+              <StackPanel Orientation="Horizontal" Spacing="8"><Button Command="{Binding TestConnectionCommand}" Content="Test"/><Button Classes="primary" Command="{Binding SaveCredentialsCommand}" Content="Save"/><Button Command="{Binding DeleteCredentialsCommand}" Content="Delete"/></StackPanel>
+              <TextBlock Classes="statusText" Text="{Binding CredentialActionStatus}" TextWrapping="Wrap"/>
+              <Separator Background="{DynamicResource BorderBrush}"/>
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Saved key"/><TextBlock Grid.Column="1" Text="{Binding SavedKeyPreview}"/></Grid>
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Storage"/><TextBlock Grid.Column="1" Text="{Binding CredentialStorageStatus}"/></Grid>
+              <TextBlock Classes="muted" Text="{Binding PermissionSummary}" TextWrapping="Wrap"/><TextBlock Classes="warningText" Text="{Binding CredentialWarnings}" TextWrapping="Wrap"/>
+            </StackPanel></Border>
+            <Border Grid.Column="1" Classes="panel" Padding="20"><StackPanel Spacing="12">
+              <TextBlock FontWeight="SemiBold" Text="Agent connection"/><TextBlock Classes="muted" Text="Legacy bearer authentication. Direct pairing arrives in 1.3." TextWrapping="Wrap"/>
+              <TextBox IsReadOnly="True" FontFamily="Menlo,Consolas,monospace" Text="{Binding DisplayedToken}"/>
+              <WrapPanel><Button Classes="quiet" Command="{Binding ToggleTokenVisibilityCommand}" Content="{Binding TokenVisibilityAction}"/><Button Classes="quiet" Command="{Binding CopyTokenCommand}" Content="Copy token"/><Button Classes="quiet" Command="{Binding RotateTokenCommand}" Content="Rotate"/></WrapPanel>
+              <Button Command="{Binding CopyCodexConfigCommand}" Content="Copy Codex config"/><Button Command="{Binding CopyClaudeCodeCommand}" Content="Copy Claude Code command"/>
+            </StackPanel></Border>
+          </Grid>
         </StackPanel>
-      </Grid>
-    </ScrollViewer>
+      </ScrollViewer>
 
-    <Grid Grid.Row="2" IsVisible="{Binding IsRiskSelected}">
-      <localViews:RiskView DataContext="{Binding Risk}" />
-    </Grid>
-    <Grid Grid.Row="2" IsVisible="{Binding IsApprovalsSelected}">
-      <localViews:ApprovalsView DataContext="{Binding Approvals}" />
-    </Grid>
-    <Grid Grid.Row="2" IsVisible="{Binding IsActivitySelected}">
-      <localViews:ActivityView DataContext="{Binding Activity}" />
-    </Grid>
-    <Grid Grid.Row="2" IsVisible="{Binding IsSettingsSelected}">
-      <localViews:SettingsView DataContext="{Binding Settings}" />
+      <Grid IsVisible="{Binding IsRiskSelected}"><localViews:RiskView DataContext="{Binding Risk}"/></Grid>
+      <Grid IsVisible="{Binding IsApprovalsSelected}"><localViews:ApprovalsView DataContext="{Binding Approvals}"/></Grid>
+      <Grid IsVisible="{Binding IsActivitySelected}"><localViews:ActivityView DataContext="{Binding Activity}"/></Grid>
+      <Grid IsVisible="{Binding IsSettingsSelected}"><localViews:SettingsView DataContext="{Binding Settings}"/></Grid>
     </Grid>
 
-    <Grid Grid.RowSpan="3" Background="#E60B1118" IsVisible="{Binding IsLiveEnableDialogOpen}">
-      <Border
-          Classes="panel"
-          Width="620"
-          MaxHeight="580"
-          Padding="26"
-          HorizontalAlignment="Center"
-          VerticalAlignment="Center">
-        <ScrollViewer>
-          <StackPanel Spacing="16">
-            <StackPanel Spacing="5">
-              <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="Enable Live trading" />
-              <TextBlock Classes="muted" Text="This enables real Bybit mainnet write operations for the current application session only." TextWrapping="Wrap" />
-            </StackPanel>
-            <Border Classes="liveBadge" Padding="16">
-              <StackPanel Spacing="8">
-                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="LIVE · REAL FUNDS AND POSITIONS" />
-                <TextBlock Text="{Binding LiveRiskSummary}" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <StackPanel Spacing="6">
-              <TextBlock Classes="fieldLabel" Text="Credential warnings" />
-              <TextBlock Classes="warningText" Text="{Binding LiveEnableWarnings}" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Spacing="6">
-              <TextBlock Classes="fieldLabel" Text="Type ENABLE LIVE TRADING exactly" />
-              <TextBox Text="{Binding LiveConfirmationText, Mode=TwoWay}" />
-            </StackPanel>
-            <TextBlock Classes="muted" Text="Enabling never cancels or changes existing exchange state. Disabling later blocks only new write actions." TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-              <Button Classes="quiet" Command="{Binding CancelLiveEnableCommand}" Content="Cancel" />
-              <Button Classes="danger" Command="{Binding ConfirmLiveEnableCommand}" Content="Enable Live trading" />
-            </StackPanel>
-          </StackPanel>
-        </ScrollViewer>
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2" Background="#E60B1118" IsVisible="{Binding IsLiveEnableDialogOpen}">
+      <Border Classes="panel" Width="620" MaxHeight="580" Padding="26" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <ScrollViewer><StackPanel Spacing="16">
+          <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="Enable Live trading"/>
+          <TextBlock Classes="muted" Text="This enables real Bybit mainnet writes for this application session only." TextWrapping="Wrap"/>
+          <Border Classes="liveBadge" Padding="16"><StackPanel Spacing="8"><TextBlock FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Text="LIVE · REAL FUNDS AND POSITIONS"/><TextBlock Text="{Binding LiveRiskSummary}" TextWrapping="Wrap"/></StackPanel></Border>
+          <TextBlock Classes="warningText" Text="{Binding LiveEnableWarnings}" TextWrapping="Wrap"/>
+          <TextBlock Classes="fieldLabel" Text="Type ENABLE LIVE TRADING exactly"/><TextBox Text="{Binding LiveConfirmationText, Mode=TwoWay}"/>
+          <TextBlock Classes="muted" Text="Disabling later blocks only new writes; it does not alter existing exchange state." TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Classes="quiet" Command="{Binding CancelLiveEnableCommand}" Content="Cancel"/><Button Classes="danger" Command="{Binding ConfirmLiveEnableCommand}" Content="Enable Live trading"/></StackPanel>
+        </StackPanel></ScrollViewer>
       </Border>
     </Grid>
   </Grid>

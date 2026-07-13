@@ -2,7 +2,7 @@
 
 <img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="128" height="128">
 
-TradeRelay is a safety-first local desktop control panel that connects MCP-capable coding agents to Bybit market data and explicitly approved trading workflows. Version `1.0.0` supports Unified Account USDT-linear perpetuals on Bybit Demo and Live.
+TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.1.0` introduces the multi-provider foundation while Bybit remains the only connected and write-capable adapter.
 
 TradeRelay is not a hosted trading service, autonomous strategy, signal provider, or financial adviser. It does not persist trading enablement, blindly retry ambiguous submissions, or clean up exchange orders when the application stops.
 
@@ -53,7 +53,7 @@ Download the archive for your platform plus `SHA256SUMS` from the GitHub Release
 sha256sum -c SHA256SUMS
 ```
 
-On macOS, `shasum -a 256 TradeRelay-1.0.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.0.0-win-x64.zip -Algorithm SHA256`.
+On macOS, `shasum -a 256 TradeRelay-1.1.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.1.0-win-x64.zip -Algorithm SHA256`.
 
 Packages clearly report their signing state in `release-metadata.json`. Unsigned builds are permitted when maintainers have not configured signing credentials; the operating system may show an unverified-publisher warning. Do not bypass a warning unless the checksum matches the official release.
 
@@ -128,7 +128,7 @@ See [development](docs/DEVELOPMENT.md) and [contributing](CONTRIBUTING.md) for t
 
 ## Release status
 
-Current version: `1.0.0`
+Current version: `1.1.0`
 
 | Milestone | Version |
 | --- | --- |
@@ -139,6 +139,7 @@ Current version: `1.0.0`
 | Demo execution | `0.5.0` |
 | Live safety | `0.6.0` |
 | Production-ready open-source release | `1.0.0` |
+| Operator console and provider foundation | `1.1.0` |
 
 Release maintainers should follow [the release procedure](docs/RELEASE.md). Automated real-Live write tests are prohibited.
 

@@ -6,13 +6,13 @@ namespace TradeRelay.Core.Security;
 /// <summary>Stores credentials in memory for the current process only.</summary>
 public sealed class SessionCredentialStore : ICredentialStore
 {
-    private readonly ConcurrentDictionary<string, ExchangeCredentials> _credentials = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ExchangeCredentialSet> _credentials = new(StringComparer.Ordinal);
 
     /// <inheritdoc />
     public bool CanPersist => false;
 
     /// <inheritdoc />
-    public Task SaveAsync(string id, ExchangeCredentials credentials, CancellationToken cancellationToken)
+    public Task SaveAsync(string id, ExchangeCredentialSet credentials, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(credentials);
@@ -22,11 +22,11 @@ public sealed class SessionCredentialStore : ICredentialStore
     }
 
     /// <inheritdoc />
-    public Task<ExchangeCredentials?> LoadAsync(string id, CancellationToken cancellationToken)
+    public Task<ExchangeCredentialSet?> LoadAsync(string id, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         cancellationToken.ThrowIfCancellationRequested();
-        _credentials.TryGetValue(id, out ExchangeCredentials? credentials);
+        _credentials.TryGetValue(id, out ExchangeCredentialSet? credentials);
         return Task.FromResult(credentials);
     }
 

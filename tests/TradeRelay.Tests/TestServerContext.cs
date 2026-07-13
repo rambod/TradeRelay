@@ -119,7 +119,7 @@ internal sealed class TestServerContext : IAsyncDisposable
     {
         public string ProviderName => "Bybit";
         public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new UnavailableMarketData();
-        public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials) => throw new NotSupportedException();
+        public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => throw new NotSupportedException();
     }
 
     private sealed class UnavailableMarketData : IMarketDataProvider

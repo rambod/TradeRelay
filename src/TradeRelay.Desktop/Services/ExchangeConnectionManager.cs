@@ -14,10 +14,12 @@ internal sealed class ExchangeConnectionManager(
     IExchangeProviderFactory providerFactory,
     ILogger<ExchangeConnectionManager> logger) : IHostedService
 {
+    private static readonly ExchangeId BybitId = new("bybit");
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly IMarketDataProvider _marketData = providerFactory.CreateMarketDataProvider(settings.Bybit.Environment);
+    private readonly ExchangeProviderSettings _providerSettings = settings.GetExchange(BybitId);
+    private readonly IMarketDataProvider _marketData = providerFactory.CreateMarketDataProvider(settings.GetExchange(BybitId).Environment);
     private IExchangeProviderConnection? _connection;
-    private ProviderConnectionSnapshot _snapshot = Empty(settings.Bybit.Environment);
+    private ProviderConnectionSnapshot _snapshot = Empty(settings.GetExchange(BybitId).Environment);
 
     public event EventHandler<ProviderConnectionSnapshot>? StateChanged;
     public ProviderConnectionSnapshot Snapshot => Volatile.Read(ref _snapshot);
@@ -28,8 +30,8 @@ internal sealed class ExchangeConnectionManager(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!settings.Bybit.RememberCredentials) return;
-        ExchangeCredentials? credentials = await credentialStore.LoadAsync(CredentialId(settings.Bybit.Environment), true, cancellationToken).ConfigureAwait(false);
+        if (!_providerSettings.ShouldRemember(_providerSettings.Environment)) return;
+        ExchangeCredentialSet? credentials = await credentialStore.LoadAsync(CredentialId(_providerSettings.Environment), true, cancellationToken).ConfigureAwait(false);
         if (credentials is not null) await ConnectAndKeepAsync(credentials, cancellationToken).ConfigureAwait(false);
     }
 
@@ -42,7 +44,7 @@ internal sealed class ExchangeConnectionManager(
     public async Task EnsureConnectedAsync(CancellationToken cancellationToken)
     {
         if (Account is not null) return;
-        ExchangeCredentials? credentials = await credentialStore.LoadAsync(CredentialId(settings.Bybit.Environment), settings.Bybit.RememberCredentials, cancellationToken).ConfigureAwait(false);
+        ExchangeCredentialSet? credentials = await credentialStore.LoadAsync(CredentialId(_providerSettings.Environment), _providerSettings.ShouldRemember(_providerSettings.Environment), cancellationToken).ConfigureAwait(false);
         if (credentials is not null) await ConnectAndKeepAsync(credentials, cancellationToken).ConfigureAwait(false);
     }
 
@@ -98,8 +100,8 @@ internal sealed class ExchangeConnectionManager(
                     storageWarning = "Protected storage is unavailable; credentials are session-only.";
                 }
 
-                settings.Bybit.Environment = environment;
-                settings.Bybit.RememberCredentials = persisted;
+                _providerSettings.Environment = environment;
+                _providerSettings.SetRemember(environment, persisted);
                 await settingsStore.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
                 _connection = candidate;
                 candidate = null!;
@@ -128,10 +130,10 @@ internal sealed class ExchangeConnectionManager(
         try
         {
             await DisposeConnectionAsync().ConfigureAwait(false);
-            await credentialStore.DeleteAsync(CredentialId(settings.Bybit.Environment), cancellationToken).ConfigureAwait(false);
-            settings.Bybit.RememberCredentials = false;
+            await credentialStore.DeleteAsync(CredentialId(_providerSettings.Environment), cancellationToken).ConfigureAwait(false);
+            _providerSettings.SetRemember(_providerSettings.Environment, false);
             await settingsStore.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
-            SetSnapshot(Empty(settings.Bybit.Environment));
+            SetSnapshot(Empty(_providerSettings.Environment));
         }
         finally { _gate.Release(); }
     }
@@ -142,12 +144,12 @@ internal sealed class ExchangeConnectionManager(
         try
         {
             await DisposeConnectionAsync().ConfigureAwait(false);
-            settings.Bybit.Environment = environment;
+            _providerSettings.Environment = environment;
             await settingsStore.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
             SetSnapshot(Empty(environment));
-            if (settings.Bybit.RememberCredentials)
+            if (_providerSettings.ShouldRemember(environment))
             {
-                ExchangeCredentials? credentials = await credentialStore.LoadAsync(CredentialId(environment), true, cancellationToken).ConfigureAwait(false);
+                ExchangeCredentialSet? credentials = await credentialStore.LoadAsync(CredentialId(environment), true, cancellationToken).ConfigureAwait(false);
                 if (credentials is not null) await ConnectAndKeepCoreAsync(credentials, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -159,35 +161,35 @@ internal sealed class ExchangeConnectionManager(
     private async Task DeleteConnectionOnlyAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try { await DisposeConnectionAsync().ConfigureAwait(false); SetSnapshot(Empty(settings.Bybit.Environment)); }
+        try { await DisposeConnectionAsync().ConfigureAwait(false); SetSnapshot(Empty(_providerSettings.Environment)); }
         finally { _gate.Release(); }
     }
 
-    private async Task ConnectAndKeepAsync(ExchangeCredentials credentials, CancellationToken cancellationToken)
+    private async Task ConnectAndKeepAsync(ExchangeCredentialSet credentials, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try { await ConnectAndKeepCoreAsync(credentials, cancellationToken).ConfigureAwait(false); }
         finally { _gate.Release(); }
     }
 
-    private async Task ConnectAndKeepCoreAsync(ExchangeCredentials credentials, CancellationToken cancellationToken)
+    private async Task ConnectAndKeepCoreAsync(ExchangeCredentialSet credentials, CancellationToken cancellationToken)
     {
-        IExchangeProviderConnection connection = providerFactory.CreateConnection(settings.Bybit.Environment, credentials);
+        IExchangeProviderConnection connection = providerFactory.CreateConnection(_providerSettings.Environment, credentials);
         try
         {
             ApiCredentialInfo info = await connection.Account.GetCredentialInfoAsync(cancellationToken).ConfigureAwait(false);
-            if (info.HasWithdrawalPermission) { SetSnapshot(Empty(settings.Bybit.Environment) with { LastError = "Saved credentials have withdrawal permission and were rejected." }); return; }
+            if (info.HasWithdrawalPermission) { SetSnapshot(Empty(_providerSettings.Environment) with { LastError = "Saved credentials have withdrawal permission and were rejected." }); return; }
             ServiceHealthState stream = await TryConnectStreamAsync(connection.Stream, cancellationToken).ConfigureAwait(false);
             int positions = (await connection.Account.GetPositionsAsync(null, cancellationToken).ConfigureAwait(false)).Count;
             int orders = (await connection.Account.GetOpenOrdersAsync(null, cancellationToken).ConfigureAwait(false)).Count;
             _connection = connection;
             connection = null!;
-            SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, settings.Bybit.Environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(credentials.ApiKey), info, positions, orders, null, Guid.NewGuid()));
+            SetSnapshot(new ProviderConnectionSnapshot(providerFactory.ProviderName, _providerSettings.Environment, ServiceHealthState.Healthy, stream, true, info.Summary, Mask(credentials[ExchangeCredentials.ApiKeyField]), info, positions, orders, null, Guid.NewGuid()));
         }
         catch (Exception exception)
         {
             logger.LogWarning("Loading saved Bybit credentials failed with {ErrorType}", exception.GetType().Name);
-            SetSnapshot(Empty(settings.Bybit.Environment) with { RestHealth = ServiceHealthState.Unavailable, LastError = "Saved credentials could not connect to Bybit." });
+            SetSnapshot(Empty(_providerSettings.Environment) with { RestHealth = ServiceHealthState.Unavailable, LastError = "Saved credentials could not connect to Bybit." });
         }
         finally { if (connection is not null) await connection.DisposeAsync().ConfigureAwait(false); }
     }
@@ -206,7 +208,7 @@ internal sealed class ExchangeConnectionManager(
     }
 
     private void SetSnapshot(ProviderConnectionSnapshot snapshot) { Volatile.Write(ref _snapshot, snapshot); StateChanged?.Invoke(this, snapshot); }
-    private static string CredentialId(TradingEnvironment environment) => $"bybit:{environment.ToString().ToLowerInvariant()}";
+    private static string CredentialId(TradingEnvironment environment) => new ExchangeProfileKey(BybitId, environment).CredentialId;
     private static string Mask(string key) => key.Length <= 4 ? "••••" : $"••••••{key[^4..]}";
     private static ProviderConnectionSnapshot Empty(TradingEnvironment environment) => new("Bybit", environment, ServiceHealthState.NotConfigured, ServiceHealthState.NotConfigured, false, "None", null, null, 0, 0, null, Guid.NewGuid());
     private static ExchangeConnectionResult Failed(string code, string message) => new(false, code, message, null, ServiceHealthState.Unavailable, ServiceHealthState.NotConfigured);

@@ -1,4 +1,5 @@
 using TradeRelay.Core.Models;
+using System.Text.Json.Serialization;
 
 namespace TradeRelay.Core.Settings;
 
@@ -7,20 +8,53 @@ namespace TradeRelay.Core.Settings;
 /// </summary>
 public sealed class AppSettings
 {
+    /// <summary>Gets the persisted settings schema version.</summary>
+    public int SchemaVersion { get; set; } = 2;
+
     /// <summary>
     /// Gets the local MCP server settings.
     /// </summary>
     public ServerSettings Server { get; set; } = new();
 
     /// <summary>
-    /// Gets the Bybit environment and credential-retention preferences.
+    /// Gets the selected provider identifier.
     /// </summary>
-    public BybitSettings Bybit { get; set; } = new();
+    public string SelectedExchange { get; set; } = "bybit";
+
+    /// <summary>Gets non-secret settings keyed by exchange identifier.</summary>
+    public Dictionary<string, ExchangeProviderSettings> Exchanges { get; set; } = new(StringComparer.Ordinal)
+    {
+        ["bybit"] = new ExchangeProviderSettings
+        {
+            Environment = TradingEnvironment.Demo,
+            RememberByEnvironment = new Dictionary<string, bool>(StringComparer.Ordinal)
+            {
+                ["demo"] = false,
+                ["live"] = false,
+            },
+        },
+    };
 
     /// <summary>
     /// Gets the configured trading risk limits.
     /// </summary>
     public RiskSettings Risk { get; set; } = new();
+
+    /// <summary>Gets the built-in Bybit profile used by the existing guarded write path.</summary>
+    [JsonIgnore]
+    public ExchangeProviderSettings Bybit => GetExchange(new ExchangeId("bybit"));
+
+    /// <summary>Gets or creates non-secret settings for an exchange.</summary>
+    public ExchangeProviderSettings GetExchange(ExchangeId exchange)
+    {
+        if (!Exchanges.TryGetValue(exchange.Value, out ExchangeProviderSettings? value))
+        {
+            value = new ExchangeProviderSettings();
+            Exchanges[exchange.Value] = value;
+        }
+
+        return value;
+    }
 }
 
 /// <summary>
@@ -40,9 +74,9 @@ public sealed class ServerSettings
 }
 
 /// <summary>
-/// Contains non-secret Bybit connection preferences.
+/// Contains non-secret connection preferences for one exchange.
 /// </summary>
-public sealed class BybitSettings
+public sealed class ExchangeProviderSettings
 {
     /// <summary>
     /// Gets the selected trading environment.
@@ -52,7 +86,23 @@ public sealed class BybitSettings
     /// <summary>
     /// Gets a value indicating whether protected device storage should be requested for credentials.
     /// </summary>
-    public bool RememberCredentials { get; set; }
+    public Dictionary<string, bool> RememberByEnvironment { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets or sets protected persistence for the currently selected environment.</summary>
+    [JsonIgnore]
+    public bool RememberCredentials
+    {
+        get => ShouldRemember(Environment);
+        set => SetRemember(Environment, value);
+    }
+
+    /// <summary>Gets whether protected persistence is requested for an environment.</summary>
+    public bool ShouldRemember(TradingEnvironment environment) =>
+        RememberByEnvironment.TryGetValue(environment.ToString().ToLowerInvariant(), out bool remember) && remember;
+
+    /// <summary>Sets whether protected persistence is requested for an environment.</summary>
+    public void SetRemember(TradingEnvironment environment, bool remember) =>
+        RememberByEnvironment[environment.ToString().ToLowerInvariant()] = remember;
 }
 
 /// <summary>

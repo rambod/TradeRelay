@@ -91,7 +91,7 @@ public sealed class SafeLoggingAndDiagnosticsTests
         Assert.DoesNotContain("auditEvents", json, StringComparison.OrdinalIgnoreCase);
         using JsonDocument document = JsonDocument.Parse(json);
         Assert.Equal("1.0", document.RootElement.GetProperty("schemaVersion").GetString());
-        Assert.Equal("1.0.0", document.RootElement.GetProperty("applicationVersion").GetString());
+        Assert.Equal(context.Metadata.Version, document.RootElement.GetProperty("applicationVersion").GetString());
     }
 
     [Fact]

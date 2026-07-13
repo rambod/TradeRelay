@@ -94,7 +94,7 @@ public sealed class LocalMcpServerHostTests
             context.TokenService.CurrentToken);
 
         Assert.Equal("TradeRelay", client.ServerInfo.Name);
-        Assert.Equal("1.0.0", client.ServerInfo.Version);
+        Assert.Equal(context.Metadata.Version, client.ServerInfo.Version);
         Assert.Contains("local trading bridge", client.ServerInstructions, StringComparison.OrdinalIgnoreCase);
 
         IList<McpClientTool> tools = await client.ListToolsAsync();
@@ -104,7 +104,7 @@ public sealed class LocalMcpServerHostTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        Assert.Contains("1.0.0", structuredContent, StringComparison.Ordinal);
+        Assert.Contains(context.Metadata.Version, structuredContent, StringComparison.Ordinal);
         Assert.Contains("Running", structuredContent, StringComparison.Ordinal);
         Assert.Contains("TradingDisabled", structuredContent, StringComparison.Ordinal);
         Assert.DoesNotContain(context.TokenService.CurrentToken, structuredContent, StringComparison.Ordinal);

@@ -2,6 +2,23 @@
 
 All notable changes are documented here. TradeRelay uses semantic versioning; milestone tags before `1.0.0` are development releases.
 
+## [1.1.0] - 2026-07-13
+
+### Added
+
+- Responsive Operations Rail with persistent exchange, environment, service-health, audit-health, and trading-state context.
+- Provider-neutral exchange IDs, profile keys, capabilities, credential-field descriptors, registry, and session-coordinator foundation.
+- Redacted multi-field credential sets and protected payload storage ready for passphrase-based providers.
+
+### Changed
+
+- Moved credential and agent setup into Connections and repositioned Demo as an onboarding environment rather than the product identity.
+- Migrated legacy Bybit settings to provider profiles while retaining existing protected `bybit:demo` and `bybit:live` identifiers.
+
+### Security
+
+- Preserved the single Bybit write path and its existing startup disable, gate, approval, audit, lease, and reconciliation controls.
+
 ## [1.0.0] - 2026-07-13
 
 ### Added

@@ -30,7 +30,7 @@ public sealed class AppSettingsTests
         [
             typeof(AppSettings),
             typeof(ServerSettings),
-            typeof(BybitSettings),
+            typeof(ExchangeProviderSettings),
             typeof(RiskSettings)
         ];
         string[] forbiddenPropertyNames =

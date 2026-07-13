@@ -12,7 +12,7 @@ Developers and technical operators running a local MCP bridge who need to inspec
 
 TradeRelay makes local exchange access observable and controllable. Success means users can understand the current safety posture, validate risk, review exactly what an MCP client proposes, and trace every explicitly enabled Demo or Live write through reconciliation.
 
-Version 1.0 adds production operations without expanding the trading boundary: users can configure local MCP startup, inspect safe runtime state, export non-secret diagnostics, verify signed or unsigned portable packages, and report security issues privately.
+Version 1.1 turns the product into a Live-oriented operator console without expanding the write boundary. The persistent Operations Rail keeps provider, environment, health, audit, and trading state visible while a provider registry prepares the product for concurrent read-only adapters.
 
 ## Brand Personality
 

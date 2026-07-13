@@ -12,7 +12,9 @@ public sealed partial class ReleaseEngineeringTests
     public void SharedMetadataAndDesktopPublishDefinitionAreProductionReady()
     {
         XDocument shared = XDocument.Load(Path.Combine(Root, "Directory.Build.props"));
-        Assert.Equal("1.0.0", shared.Descendants("Version").Single().Value);
+        string version = shared.Descendants("Version").Single().Value;
+        Assert.Matches("^[0-9]+\\.[0-9]+\\.[0-9]+$", version);
+        Assert.Contains($"Current version: `{version}`", File.ReadAllText(Path.Combine(Root, "README.md")), StringComparison.Ordinal);
         Assert.Equal("TradeRelay", shared.Descendants("Product").Single().Value);
         Assert.Equal("true", shared.Descendants("Deterministic").Single().Value);
         Assert.Equal("true", shared.Descendants("TreatWarningsAsErrors").Single().Value);

@@ -10,6 +10,7 @@ using TradeRelay.Core.Security;
 using TradeRelay.Desktop.Security;
 using TradeRelay.Providers.Bybit;
 using TradeRelay.Core.Risk;
+using TradeRelay.Core.Models;
 
 namespace TradeRelay.Desktop;
 
@@ -57,6 +58,7 @@ internal static class Program
             new LinuxSecretServiceCredentialStore(services.GetRequiredService<LinuxSecretServiceSecretStore>()));
         builder.Services.AddSingleton<CredentialStoreCoordinator>();
         builder.Services.AddSingleton<IExchangeProviderFactory, BybitExchangeProviderFactory>();
+        builder.Services.AddSingleton<IExchangeProviderRegistry, ExchangeProviderRegistry>();
         builder.Services.AddSingleton<RiskEngine>();
         builder.Services.AddSingleton<PreparedOrderStore>();
         builder.Services.AddSingleton<LiveActionConfirmationStore>();
@@ -71,6 +73,7 @@ internal static class Program
         builder.Services.AddSingleton<LocalMcpTokenService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<LocalMcpTokenService>());
         builder.Services.AddSingleton<ExchangeConnectionManager>();
+        builder.Services.AddSingleton<IExchangeSessionCoordinator, ExchangeSessionCoordinator>();
         builder.Services.AddHostedService(services => services.GetRequiredService<ExchangeConnectionManager>());
         builder.Services.AddSingleton<LocalMcpServerHost>();
         builder.Services.AddHostedService(services =>

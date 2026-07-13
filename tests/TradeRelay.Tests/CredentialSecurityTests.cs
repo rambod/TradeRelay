@@ -20,8 +20,8 @@ public sealed class CredentialSecurityTests
 
         await store.SaveAsync("bybit:demo", demo, default);
         await store.SaveAsync("bybit:live", live, default);
-        Assert.Equal("demo-key", (await store.LoadAsync("bybit:demo", default))?.ApiKey);
-        Assert.Equal("live-key", (await store.LoadAsync("bybit:live", default))?.ApiKey);
+        Assert.Equal("demo-key", (await store.LoadAsync("bybit:demo", default))?[ExchangeCredentials.ApiKeyField]);
+        Assert.Equal("live-key", (await store.LoadAsync("bybit:live", default))?[ExchangeCredentials.ApiKeyField]);
 
         await store.DeleteAsync("bybit:demo", default);
         Assert.Null(await store.LoadAsync("bybit:demo", default));
@@ -42,16 +42,16 @@ public sealed class CredentialSecurityTests
     }
 
     [Fact]
-    public async Task ProtectedCredentialStore_UsesSeparateProtectedValuesAndDeletesBoth()
+    public async Task ProtectedCredentialStore_UsesOneProtectedPayloadAndDeletesLegacyValues()
     {
         var secrets = new RecordingSecretStore();
         var store = new TestProtectedCredentialStore(secrets);
         await store.SaveAsync("bybit:demo", new ExchangeCredentials("key", "secret"), default);
 
-        Assert.Equal("key", secrets.Values["bybit:demo:key"]);
-        Assert.Equal("secret", secrets.Values["bybit:demo:secret"]);
-        ExchangeCredentials? loaded = await store.LoadAsync("bybit:demo", default);
-        Assert.Equal("key", loaded?.ApiKey);
+        Assert.Contains("key", secrets.Values["bybit:demo:credentials"], StringComparison.Ordinal);
+        Assert.Contains("secret", secrets.Values["bybit:demo:credentials"], StringComparison.Ordinal);
+        ExchangeCredentialSet? loaded = await store.LoadAsync("bybit:demo", default);
+        Assert.Equal("key", loaded?[ExchangeCredentials.ApiKeyField]);
 
         await store.DeleteAsync("bybit:demo", default);
         Assert.Empty(secrets.Values);
@@ -84,7 +84,9 @@ public sealed class CredentialSecurityTests
         {
             var paths = new ApplicationDataPaths(root);
             var store = new ApplicationSettingsStore(paths);
-            var settings = new AppSettings { Bybit = new BybitSettings { Environment = TradingEnvironment.Live, RememberCredentials = true } };
+            var settings = new AppSettings();
+            settings.Bybit.Environment = TradingEnvironment.Live;
+            settings.Bybit.RememberCredentials = true;
             await store.SaveAsync(settings, default);
             string json = await File.ReadAllTextAsync(paths.SettingsFile);
 

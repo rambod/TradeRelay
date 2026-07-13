@@ -69,10 +69,20 @@ public interface IExchangeProviderFactory
 {
     /// <summary>Gets the provider name.</summary>
     string ProviderName { get; }
+    /// <summary>Gets provider metadata and capabilities.</summary>
+    ExchangeProviderDescriptor Descriptor => new(
+        new ExchangeId(ProviderName),
+        ProviderName,
+        ProviderCapabilities.MarketData | ProviderCapabilities.AccountRead | ProviderCapabilities.PrivateStream,
+        [TradingEnvironment.Demo, TradingEnvironment.Live],
+        [
+            new CredentialFieldDescriptor(ExchangeCredentials.ApiKeyField, "API key", false),
+            new CredentialFieldDescriptor(ExchangeCredentials.ApiSecretField, "API secret", true),
+        ]);
     /// <summary>Creates public market data for an environment.</summary>
     IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment);
     /// <summary>Creates an authenticated provider connection.</summary>
-    IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials);
+    IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials);
 }
 
 /// <summary>Owns one authenticated provider connection.</summary>

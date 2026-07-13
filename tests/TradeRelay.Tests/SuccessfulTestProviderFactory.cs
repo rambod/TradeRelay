@@ -12,7 +12,7 @@ internal sealed class SuccessfulTestProviderFactory(
 {
     public string ProviderName => "Bybit";
     public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new MarketData(ticker);
-    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentials credentials) => new Connection(environment, readOnly, trading ?? new StubTradingProvider(), positions ?? [], orders ?? []);
+    public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => new Connection(environment, readOnly, trading ?? new StubTradingProvider(), positions ?? [], orders ?? []);
 
     private sealed class Connection(TradingEnvironment environment, bool readOnly, StubTradingProvider trading, IReadOnlyList<PositionSnapshot> positions, IReadOnlyList<OrderSnapshot> orders) : IExchangeProviderConnection
     {

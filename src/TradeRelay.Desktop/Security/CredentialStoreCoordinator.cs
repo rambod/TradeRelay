@@ -7,7 +7,7 @@ internal sealed class CredentialStoreCoordinator(SessionCredentialStore sessionS
 {
     public bool CanPersist => persistentStore.CanPersist;
 
-    public async Task SaveAsync(string id, ExchangeCredentials credentials, bool remember, CancellationToken cancellationToken)
+    public async Task SaveAsync(string id, ExchangeCredentialSet credentials, bool remember, CancellationToken cancellationToken)
     {
         await sessionStore.SaveAsync(id, credentials, cancellationToken).ConfigureAwait(false);
         if (remember)
@@ -21,9 +21,9 @@ internal sealed class CredentialStoreCoordinator(SessionCredentialStore sessionS
         }
     }
 
-    public async Task<ExchangeCredentials?> LoadAsync(string id, bool remember, CancellationToken cancellationToken)
+    public async Task<ExchangeCredentialSet?> LoadAsync(string id, bool remember, CancellationToken cancellationToken)
     {
-        ExchangeCredentials? current = await sessionStore.LoadAsync(id, cancellationToken).ConfigureAwait(false);
+        ExchangeCredentialSet? current = await sessionStore.LoadAsync(id, cancellationToken).ConfigureAwait(false);
         if (current is not null || !remember || !CanPersist) return current;
         current = await persistentStore.LoadAsync(id, cancellationToken).ConfigureAwait(false);
         if (current is not null) await sessionStore.SaveAsync(id, current, cancellationToken).ConfigureAwait(false);

@@ -32,7 +32,7 @@ public sealed class SystemToolsTests
         Assert.True(result.Success);
         Assert.Equal("OK", result.Code);
         Assert.NotNull(result.Data);
-        Assert.Equal("1.0.0", result.Data.AppVersion);
+        Assert.Equal(context.Metadata.Version, result.Data.AppVersion);
         Assert.Equal(McpServerState.Stopped, result.Data.ServerState);
         Assert.Equal(TradingEnvironment.Demo, result.Data.Environment);
         Assert.Equal(TradingAccessMode.TradingDisabled, result.Data.AccessMode);

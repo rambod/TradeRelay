@@ -32,6 +32,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     [ObservableProperty] private bool _isDashboardSelected = true;
     [ObservableProperty] private bool _isCredentialsSelected;
+    [ObservableProperty] private bool _isOperationsSelected;
     [ObservableProperty] private bool _isRiskSelected;
     [ObservableProperty] private bool _isApprovalsSelected;
     [ObservableProperty] private bool _isActivitySelected;
@@ -46,6 +47,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _credentialActionStatus = "Enter Bybit Demo credentials to test the read-only connection.";
     [ObservableProperty] private string _permissionSummary = "Not connected";
     [ObservableProperty] private string _credentialWarnings = "None";
+    [ObservableProperty] private bool _isCompactNavigation;
 
     [ObservableProperty]
     private bool _isTokenRevealed;
@@ -122,7 +124,18 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the current development milestone label.
     /// </summary>
-    public string DevelopmentStatus => "Production-ready local Bybit control panel";
+    public string DevelopmentStatus => "Local operator console for guarded exchange automation";
+
+    public bool IsOverviewSelected => IsDashboardSelected;
+    public bool IsConnectionsSelected => IsCredentialsSelected;
+    public double NavigationRailWidth => IsCompactNavigation ? 76 : 208;
+    public string OverviewNavLabel => IsCompactNavigation ? "OV" : "Overview";
+    public string OperationsNavLabel => IsCompactNavigation ? "OP" : "Operations";
+    public string ApprovalsNavLabel => IsCompactNavigation ? "AP" : "Approvals";
+    public string ActivityNavLabel => IsCompactNavigation ? "AC" : "Activity";
+    public string ConnectionsNavLabel => IsCompactNavigation ? "CN" : "Connections";
+    public string RiskNavLabel => IsCompactNavigation ? "RK" : "Risk";
+    public string SettingsNavLabel => IsCompactNavigation ? "ST" : "Settings";
 
     public RiskViewModel Risk { get; }
     public ApprovalsViewModel Approvals { get; }
@@ -222,6 +235,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     public string RestHealth => _providerSnapshot.RestHealth.ToString();
     public string StreamHealth => _providerSnapshot.StreamHealth.ToString();
+    public string HealthSummary => $"{RestHealth} · {StreamHealth} · {(_auditLog.Health.Healthy ? "Healthy" : "Unavailable")}";
     public string SavedKeyPreview => _providerSnapshot.SavedKeyPreview ?? "None";
     public string CredentialStorageStatus => _connectionManager.Snapshot.CredentialLoaded
         ? (_settings.Bybit.RememberCredentials ? "Protected on this device" : "Session only")
@@ -253,6 +267,26 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     }
 
     partial void OnLiveConfirmationTextChanged(string value) => ConfirmLiveEnableCommand.NotifyCanExecuteChanged();
+
+    partial void OnIsCompactNavigationChanged(bool value)
+    {
+        OnPropertyChanged(nameof(NavigationRailWidth));
+        OnPropertyChanged(nameof(OverviewNavLabel)); OnPropertyChanged(nameof(OperationsNavLabel));
+        OnPropertyChanged(nameof(ApprovalsNavLabel)); OnPropertyChanged(nameof(ActivityNavLabel));
+        OnPropertyChanged(nameof(ConnectionsNavLabel)); OnPropertyChanged(nameof(RiskNavLabel));
+        OnPropertyChanged(nameof(SettingsNavLabel));
+    }
+
+    public void SetCompactNavigation(bool compact) => IsCompactNavigation = compact;
+
+    [RelayCommand]
+    private void ShowOverview() => SelectPage(dashboard: true);
+
+    [RelayCommand]
+    private void ShowOperations() => SelectPage(operations: true);
+
+    [RelayCommand]
+    private void ShowConnections() => SelectPage(credentials: true);
 
     [RelayCommand]
     private void ShowDashboard() => SelectPage(dashboard: true);
@@ -459,14 +493,17 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     private void OnTradingStateChanged(object? sender, TradingSessionSnapshot snapshot) => _uiDispatcher.Post(NotifyTradingState);
 
-    private void SelectPage(bool dashboard = false, bool credentials = false, bool risk = false, bool approvals = false, bool activity = false, bool settings = false)
+    private void SelectPage(bool dashboard = false, bool operations = false, bool credentials = false, bool risk = false, bool approvals = false, bool activity = false, bool settings = false)
     {
         IsDashboardSelected = dashboard;
+        IsOperationsSelected = operations;
         IsCredentialsSelected = credentials;
         IsRiskSelected = risk;
         IsApprovalsSelected = approvals;
         IsActivitySelected = activity;
         IsSettingsSelected = settings;
+        OnPropertyChanged(nameof(IsOverviewSelected));
+        OnPropertyChanged(nameof(IsConnectionsSelected));
     }
 
     private void NotifyTradingState()
@@ -484,6 +521,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         OnPropertyChanged(nameof(EnvironmentStatus)); OnPropertyChanged(nameof(ProviderStatus));
         OnPropertyChanged(nameof(OpenPositionCount)); OnPropertyChanged(nameof(OpenOrderCount));
         OnPropertyChanged(nameof(RestHealth)); OnPropertyChanged(nameof(StreamHealth));
+        OnPropertyChanged(nameof(HealthSummary));
         OnPropertyChanged(nameof(SavedKeyPreview)); OnPropertyChanged(nameof(CredentialStorageStatus));
         OnPropertyChanged(nameof(LiveEnableWarnings));
         OnPropertyChanged(nameof(LastError));
