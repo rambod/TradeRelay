@@ -19,7 +19,7 @@ public class ExchangeCredentialSet
         {
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(value))
                 throw new ArgumentException("Credential names and values are required.", nameof(fields));
-            copy[name.Trim()] = value.Trim();
+            copy[name.Trim()] = value;
         }
 
         _fields = new ReadOnlyDictionary<string, string>(copy);
@@ -60,6 +60,8 @@ public sealed class ExchangeCredentials : ExchangeCredentialSet
     public const string ApiKeyField = "apiKey";
     /// <summary>The canonical API-secret field name.</summary>
     public const string ApiSecretField = "apiSecret";
+    /// <summary>The canonical API passphrase field used by providers such as KuCoin.</summary>
+    public const string PassphraseField = "passphrase";
 
     /// <summary>Gets the API key.</summary>
     [JsonIgnore]

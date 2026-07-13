@@ -7,6 +7,7 @@ namespace TradeRelay.Desktop.Services;
 
 internal sealed class ApplicationSettingsStore(ApplicationDataPaths paths)
 {
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -39,6 +40,15 @@ internal sealed class ApplicationSettingsStore(ApplicationDataPaths paths)
                 SaveAsync(settings, CancellationToken.None).GetAwaiter().GetResult();
             }
 
+            if (settings.SchemaVersion < 3)
+            {
+                settings.GetExchange(new ExchangeId("binance")).Environment = TradingEnvironment.Live;
+                settings.GetExchange(new ExchangeId("kucoin")).Environment = TradingEnvironment.Live;
+                settings.SchemaVersion = 3;
+                BackupSettingsOnce(2);
+                SaveAsync(settings, CancellationToken.None).GetAwaiter().GetResult();
+            }
+
             return settings;
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
@@ -53,14 +63,25 @@ internal sealed class ApplicationSettingsStore(ApplicationDataPaths paths)
         if (!File.Exists(backup)) File.Copy(paths.SettingsFile, backup);
     }
 
+    private void BackupSettingsOnce(int version)
+    {
+        string backup = $"{paths.SettingsFile}.v{version}.backup";
+        if (!File.Exists(backup)) File.Copy(paths.SettingsFile, backup);
+    }
+
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(paths.Root);
-        string temporary = paths.SettingsFile + ".tmp";
-        await using (FileStream stream = new(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, settings, Options, cancellationToken).ConfigureAwait(false);
+            Directory.CreateDirectory(paths.Root);
+            string temporary = paths.SettingsFile + ".tmp";
+            await using (FileStream stream = new(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await JsonSerializer.SerializeAsync(stream, settings, Options, cancellationToken).ConfigureAwait(false);
+            }
+            File.Move(temporary, paths.SettingsFile, true);
         }
-        File.Move(temporary, paths.SettingsFile, true);
+        finally { _writeLock.Release(); }
     }
 }

@@ -34,6 +34,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 - Operations uses compact tabular rows with textual Long/Short direction, while Error Center groups stable safe codes with recovery guidance.
 - Use a focused Settings form for MCP lifecycle, application paths, diagnostics, and release identity.
 - Agent-client installation is an operator-reviewed change showing the exact argument-array command, target paths, requested scopes, and an acknowledgment before mutation.
+- Connections renders provider-declared credential fields, capabilities, health, and a persistent textual read-only boundary; Operations exposes an explicit exchange filter.
 - Avoid nested cards; borders define only genuine panels or grouped workflows.
 
 ## Components

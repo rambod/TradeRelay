@@ -6,7 +6,7 @@ Thank you for improving TradeRelay. Safety-sensitive changes should be small, re
 
 - Discuss large behavior or security changes in an issue first.
 - Never commit credentials, tokens, account data, authenticated payloads, signatures, `.env` files, or real audit/log output.
-- Keep Bybit.Net types inside `TradeRelay.Providers.Bybit` and exchange-neutral contracts in Core.
+- Keep provider transports, payloads, and SDK types inside their `TradeRelay.Providers.*` adapter and exchange-neutral contracts in Core.
 - Do not add databases, microservices, MediatR, repository layers, background trading queues, telemetry, persistent trading enablement, or a second execution path without an approved architecture change.
 - Never add or run an automated real-Live write test.
 

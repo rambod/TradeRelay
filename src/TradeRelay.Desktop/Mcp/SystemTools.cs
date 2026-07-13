@@ -11,7 +11,7 @@ namespace TradeRelay.Desktop.Mcp;
 internal sealed class SystemTools(
     LocalMcpServerHost serverHost,
     AppSettings settings,
-    ExchangeConnectionManager connectionManager,
+    IExchangeSessionCoordinator sessions,
     PreparedOrderStore preparedOrderStore,
     LiveActionConfirmationStore liveConfirmations,
     TradingControlService tradingControl,
@@ -29,21 +29,23 @@ internal sealed class SystemTools(
     public ToolResult<SystemStatusSnapshot> GetSystemStatus()
     {
         DateTimeOffset timestamp = timeProvider.GetUtcNow();
-        TradingEnvironment environment = settings.Bybit.Environment;
-        bool manualApprovalRequired = environment == TradingEnvironment.Live
+        sessions.TryResolve(null, out ProviderSessionAccess? selected, out _, out _);
+        TradingEnvironment environment = selected?.Environment ?? settings.Bybit.Environment;
+        bool writeCapable = selected?.Descriptor.Capabilities.HasFlag(ProviderCapabilities.TradingWrite) == true;
+        bool manualApprovalRequired = writeCapable && (environment == TradingEnvironment.Live
             ? settings.Risk.RequireManualApprovalForLive
-            : settings.Risk.RequireManualApprovalForDemo;
+            : settings.Risk.RequireManualApprovalForDemo);
         McpServerSnapshot server = serverHost.Snapshot;
-        ProviderConnectionSnapshot provider = connectionManager.Snapshot;
+        ProviderConnectionSnapshot provider = selected?.Snapshot ?? sessions.Sessions[0].Snapshot;
 
         var status = new SystemStatusSnapshot(
             metadata.Version,
             server.State,
             server.Url,
-            "Bybit",
+            selected?.Descriptor.DisplayName ?? "Bybit",
             environment,
-            tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled,
-            LiveTradingEnabled: environment == TradingEnvironment.Live && tradingControl.Snapshot.Enabled,
+            writeCapable ? tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled : TradingAccessMode.ReadOnly,
+            LiveTradingEnabled: writeCapable && environment == TradingEnvironment.Live && tradingControl.Snapshot.Enabled,
             manualApprovalRequired,
             provider.RestHealth,
             provider.StreamHealth,

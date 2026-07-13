@@ -18,6 +18,8 @@ Version 1.2 makes exchange operations observable: current positions, orders, fil
 
 Version 1.3 pairs local agent clients through scoped OAuth and installs one canonical operator skill across Codex, Claude Code, and Gemini CLI. Read & Plan is the default; Trade is a deliberate re-pairing decision and still cannot enable trading or bypass desktop approvals, audit, gates, or reconciliation.
 
+Version 1.4 connects Bybit, Binance, and KuCoin concurrently for operator inspection. Binance and KuCoin are Live read-only adapters; Bybit remains the sole write-capable provider and retains the authoritative safety pipeline.
+
 ## Brand Personality
 
 Calm, precise, protective. The product should communicate expert confidence without trading hype, alarm fatigue, or decorative complexity.

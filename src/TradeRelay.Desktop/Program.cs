@@ -9,6 +9,8 @@ using TradeRelay.Core.Providers;
 using TradeRelay.Core.Security;
 using TradeRelay.Desktop.Security;
 using TradeRelay.Providers.Bybit;
+using TradeRelay.Providers.Binance;
+using TradeRelay.Providers.KuCoin;
 using TradeRelay.Core.Risk;
 using TradeRelay.Core.Models;
 
@@ -60,7 +62,14 @@ internal static class Program
         builder.Services.AddSingleton<OAuthPairingService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<OAuthPairingService>());
         builder.Services.AddSingleton<IExchangeProviderFactory, BybitExchangeProviderFactory>();
-        builder.Services.AddSingleton<IExchangeProviderRegistry, ExchangeProviderRegistry>();
+        builder.Services.AddSingleton<BinanceExchangeProviderFactory>();
+        builder.Services.AddSingleton<KuCoinExchangeProviderFactory>();
+        builder.Services.AddSingleton<IExchangeProviderRegistry>(services => new ExchangeProviderRegistry(
+        [
+            services.GetRequiredService<IExchangeProviderFactory>(),
+            services.GetRequiredService<BinanceExchangeProviderFactory>(),
+            services.GetRequiredService<KuCoinExchangeProviderFactory>(),
+        ]));
         builder.Services.AddSingleton<RiskEngine>();
         builder.Services.AddSingleton<PreparedOrderStore>();
         builder.Services.AddSingleton<LiveActionConfirmationStore>();
@@ -75,8 +84,10 @@ internal static class Program
         builder.Services.AddSingleton<LocalMcpTokenService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<LocalMcpTokenService>());
         builder.Services.AddSingleton<ExchangeConnectionManager>();
-        builder.Services.AddSingleton<IExchangeSessionCoordinator, ExchangeSessionCoordinator>();
+        builder.Services.AddSingleton<ExchangeSessionCoordinator>();
+        builder.Services.AddSingleton<IExchangeSessionCoordinator>(services => services.GetRequiredService<ExchangeSessionCoordinator>());
         builder.Services.AddHostedService(services => services.GetRequiredService<ExchangeConnectionManager>());
+        builder.Services.AddHostedService(services => services.GetRequiredService<ExchangeSessionCoordinator>());
         builder.Services.AddSingleton<TradingLifecycleService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<TradingLifecycleService>());
         builder.Services.AddSingleton<LocalMcpServerHost>();
@@ -94,8 +105,13 @@ internal static class Program
         builder.Services.AddSingleton<ApprovalsViewModel>();
         builder.Services.AddSingleton<ActivityViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
-        builder.Services.AddSingleton<OperationsViewModel>();
+        builder.Services.AddSingleton(services => new OperationsViewModel(
+            services.GetRequiredService<IExchangeSessionCoordinator>(),
+            services.GetRequiredService<AuditLogService>(),
+            services.GetRequiredService<IUiDispatcher>(),
+            services.GetRequiredService<TimeProvider>()));
         builder.Services.AddSingleton<AgentClientsViewModel>();
+        builder.Services.AddSingleton<ProviderConnectionsViewModel>();
         builder.Services.AddSingleton<MainWindowViewModel>();
         builder.Services.AddTransient(services =>
             new MainWindow(services.GetRequiredService<MainWindowViewModel>()));

@@ -17,7 +17,7 @@ public sealed class SystemToolsTests
         var tools = new SystemTools(
             context.Host,
             context.Settings,
-            context.ConnectionManager,
+            context.Sessions,
             context.PreparedOrderStore,
             context.LiveConfirmations,
             context.TradingControl,

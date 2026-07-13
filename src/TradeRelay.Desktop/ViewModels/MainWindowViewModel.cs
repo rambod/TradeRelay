@@ -26,9 +26,12 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     private readonly LiveActionConfirmationStore _liveConfirmations;
     private readonly TradingControlService _tradingControl;
     private readonly AuditLogService _auditLog;
+    private readonly IExchangeSessionCoordinator? _sessionCoordinator;
     private CancellationTokenSource? _messageClearCancellation;
     private McpServerSnapshot _serverSnapshot;
     private ProviderConnectionSnapshot _providerSnapshot;
+    private ExchangeProviderDescriptor? _selectedProviderDescriptor;
+    private TradingEnvironment _selectedProviderEnvironment;
 
     [ObservableProperty] private bool _isDashboardSelected = true;
     [ObservableProperty] private bool _isCredentialsSelected;
@@ -76,7 +79,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         IUiDispatcher uiDispatcher,
         TimeProvider timeProvider,
         OperationsViewModel? operations = null,
-        AgentClientsViewModel? agentClients = null)
+        AgentClientsViewModel? agentClients = null,
+        ProviderConnectionsViewModel? providerConnections = null,
+        IExchangeSessionCoordinator? sessionCoordinator = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _serverHost = serverHost ?? throw new ArgumentNullException(nameof(serverHost));
@@ -89,16 +94,25 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _liveConfirmations = liveConfirmations ?? throw new ArgumentNullException(nameof(liveConfirmations));
         _tradingControl = tradingControl ?? throw new ArgumentNullException(nameof(tradingControl));
         _auditLog = auditLog ?? throw new ArgumentNullException(nameof(auditLog));
+        _sessionCoordinator = sessionCoordinator;
         ArgumentNullException.ThrowIfNull(metadata);
 
         AppVersion = metadata.Version;
         _serverSnapshot = serverHost.Snapshot;
         _providerSnapshot = connectionManager.Snapshot;
+        _selectedProviderEnvironment = connectionManager.Snapshot.Environment;
+        if (sessionCoordinator?.TryResolve(null, out ProviderSessionAccess? selectedSession, out _, out _) == true && selectedSession is not null)
+        {
+            _providerSnapshot = selectedSession.Snapshot;
+            _selectedProviderDescriptor = selectedSession.Descriptor;
+            _selectedProviderEnvironment = selectedSession.Environment;
+        }
         _selectedEnvironment = settings.Bybit.Environment;
         _rememberCredentials = settings.Bybit.RememberCredentials;
         _serverHost.StateChanged += OnServerStateChanged;
         _tokenService.TokenRotated += OnTokenRotated;
         _connectionManager.StateChanged += OnProviderStateChanged;
+        if (_sessionCoordinator is not null) _sessionCoordinator.StateChanged += OnSessionStateChanged;
         _preparedOrderStore.Changed += OnPreparedOrderChanged;
         _liveConfirmations.Changed += OnLiveConfirmationChanged;
         _tradingControl.StateChanged += OnTradingStateChanged;
@@ -108,6 +122,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         Settings = settingsViewModel;
         Operations = operations ?? new OperationsViewModel(connectionManager, auditLog, uiDispatcher, timeProvider);
         AgentClients = agentClients;
+        ProviderConnections = providerConnections;
     }
 
     /// <summary>
@@ -147,6 +162,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     public SettingsViewModel Settings { get; }
     public OperationsViewModel Operations { get; }
     public AgentClientsViewModel? AgentClients { get; }
+    public ProviderConnectionsViewModel? ProviderConnections { get; }
 
     public IReadOnlyList<TradingEnvironment> Environments { get; } = Enum.GetValues<TradingEnvironment>();
 
@@ -197,7 +213,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the startup trading access mode.
     /// </summary>
-    public string AccessStatus => (_tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled).ToString();
+    public string AccessStatus => IsSelectedProviderWriteCapable ? (_tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled).ToString() : TradingAccessMode.ReadOnly.ToString();
 
     public string TradingState => _tradingControl.Snapshot.StateLabel;
     public string TradingDetail => _tradingControl.Snapshot.LastError ?? $"{SelectedEnvironment} write tools are available for this session.";
@@ -210,7 +226,11 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     public bool ShowDemoEnable => IsDemoEnvironment && IsTradingDisabled;
     public bool ShowLiveEnable => IsLiveEnvironment && IsTradingDisabled;
     public string EnvironmentBadge => IsLiveEnvironment ? "LIVE" : "DEMO";
-    public string HeaderSafetyState => $"{SelectedEnvironment.ToString().ToUpperInvariant()} · {(IsTradingEnabled ? "TRADING ENABLED" : "TRADING DISABLED")}";
+    public string HeaderSafetyState => IsSelectedProviderWriteCapable ? $"{_selectedProviderEnvironment.ToString().ToUpperInvariant()} · {(IsTradingEnabled ? "TRADING ENABLED" : "TRADING DISABLED")}" : $"{_selectedProviderEnvironment.ToString().ToUpperInvariant()} · READ ONLY";
+    public bool IsHeaderLive => _selectedProviderEnvironment == TradingEnvironment.Live;
+    public bool IsHeaderDemo => !IsHeaderLive;
+    public string SelectedProviderName => _selectedProviderDescriptor?.DisplayName ?? "Bybit";
+    private bool IsSelectedProviderWriteCapable => _selectedProviderDescriptor?.Capabilities.HasFlag(ProviderCapabilities.TradingWrite) ?? true;
     public string LiveRiskSummary => $"Risk/trade {_settings.Risk.MaxRiskPerTradePercent}% · Notional ${_settings.Risk.MaxOrderNotionalUsd} · Positions {_settings.Risk.MaxOpenPositions} · Leverage {_settings.Risk.MaxLeverage}× · Market drift {_settings.Risk.MaxMarketPriceDeviationPercent}% · Manual approval {(_settings.Risk.RequireManualApprovalForLive ? "required" : "disabled by operator")}";
     public string LiveEnableWarnings => _providerSnapshot.CredentialInfo?.Warnings.Count > 0 ? string.Join(Environment.NewLine, _providerSnapshot.CredentialInfo.Warnings.Select(item => $"• {item}")) : "No additional credential warnings reported.";
 
@@ -222,7 +242,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the selected provider status.
     /// </summary>
-    public string ProviderStatus => $"Bybit · {_providerSnapshot.RestHealth}";
+    public string ProviderStatus => $"{SelectedProviderName} · {_providerSnapshot.RestHealth}";
 
     /// <summary>
     /// Gets the current open-position count.
@@ -448,6 +468,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _serverHost.StateChanged -= OnServerStateChanged;
         _tokenService.TokenRotated -= OnTokenRotated;
         _connectionManager.StateChanged -= OnProviderStateChanged;
+        if (_sessionCoordinator is not null) _sessionCoordinator.StateChanged -= OnSessionStateChanged;
         _preparedOrderStore.Changed -= OnPreparedOrderChanged;
         _liveConfirmations.Changed -= OnLiveConfirmationChanged;
         _tradingControl.StateChanged -= OnTradingStateChanged;
@@ -456,6 +477,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         Settings.Dispose();
         Operations.Dispose();
         AgentClients?.Dispose();
+        ProviderConnections?.Dispose();
         CancellationTokenSource? cancellation = Interlocked.Exchange(ref _messageClearCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
@@ -491,7 +513,17 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
         _uiDispatcher.Post(() => OnPropertyChanged(nameof(DisplayedToken)));
 
     private void OnProviderStateChanged(object? sender, ProviderConnectionSnapshot snapshot) =>
-        _uiDispatcher.Post(() => ApplyProviderSnapshot(snapshot));
+        _uiDispatcher.Post(() => { if (_sessionCoordinator is null || _settings.SelectedExchange == "bybit") ApplyProviderSnapshot(snapshot); });
+
+    private void OnSessionStateChanged(object? sender, ProviderSessionAccess session) =>
+        _uiDispatcher.Post(() =>
+        {
+            if (_settings.SelectedExchange != session.Descriptor.Id.Value) return;
+            _selectedProviderDescriptor = session.Descriptor;
+            _selectedProviderEnvironment = session.Environment;
+            ApplyProviderSnapshot(session.Snapshot);
+            OnPropertyChanged(nameof(SelectedProviderName)); OnPropertyChanged(nameof(AccessStatus)); OnPropertyChanged(nameof(HeaderSafetyState)); OnPropertyChanged(nameof(IsHeaderLive)); OnPropertyChanged(nameof(IsHeaderDemo));
+        });
 
     private void OnPreparedOrderChanged(object? sender, PreparedOrder order) =>
         _uiDispatcher.Post(() => OnPropertyChanged(nameof(PendingApprovalCount)));

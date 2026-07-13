@@ -35,13 +35,15 @@ internal sealed class TestServerContext : IAsyncDisposable
     public SensitiveDataRedactor Redactor { get; }
     public SafeLogService SafeLog { get; }
     public OAuthPairingService OAuth { get; }
+    public ExchangeSessionCoordinator Sessions { get; }
     private string DataDirectory { get; set; } = string.Empty;
 
     public static TestServerContext Create(
         int port = 0,
         TimeProvider? timeProvider = null,
         ILogger<LocalMcpServerHost>? logger = null,
-        IExchangeProviderFactory? providerFactory = null)
+        IExchangeProviderFactory? providerFactory = null,
+        IReadOnlyList<IExchangeProviderFactory>? additionalProviders = null)
     {
         var settings = new AppSettings
         {
@@ -58,7 +60,8 @@ internal sealed class TestServerContext : IAsyncDisposable
             new ApplicationMetadata(),
             timeProvider ?? TimeProvider.System,
             logger ?? NullLogger<LocalMcpServerHost>.Instance,
-            providerFactory ?? new UnavailableProviderFactory());
+            providerFactory ?? new UnavailableProviderFactory(),
+            additionalProviders ?? []);
     }
 
     public async ValueTask DisposeAsync()
@@ -74,7 +77,8 @@ internal sealed class TestServerContext : IAsyncDisposable
         ApplicationMetadata metadata,
         TimeProvider timeProvider,
         ILogger<LocalMcpServerHost> logger,
-        IExchangeProviderFactory providerFactory)
+        IExchangeProviderFactory providerFactory,
+        IReadOnlyList<IExchangeProviderFactory> additionalProviders)
     {
         Settings = settings;
         TokenService = tokenService;
@@ -87,10 +91,11 @@ internal sealed class TestServerContext : IAsyncDisposable
         SafeLog = new SafeLogService(Paths, timeProvider, Redactor);
         OAuth = new OAuthPairingService(Paths, new InMemoryProtectedSecretStore(), timeProvider);
         SettingsStore = new ApplicationSettingsStore(Paths);
+        var credentialCoordinator = new CredentialStoreCoordinator(session, session);
         ConnectionManager = new ExchangeConnectionManager(
             settings,
             SettingsStore,
-            new CredentialStoreCoordinator(session, session),
+            credentialCoordinator,
             providerFactory,
             NullLogger<ExchangeConnectionManager>.Instance);
         RiskEngine = new RiskEngine();
@@ -101,6 +106,8 @@ internal sealed class TestServerContext : IAsyncDisposable
         TradingControl = new TradingControlService(ConnectionManager, RiskEngine, settings, AuditLog, LiveConfirmations, timeProvider);
         TradingGate = new TradingGate(TradingControl, ConnectionManager, AuditLog, settings, RiskEngine);
         OrderExecutionService = new OrderExecutionService(ConnectionManager, TradingControl, TradingGate, OrderPreparationService, PreparedOrderStore, LiveConfirmations, AuditLog, timeProvider);
+        var registry = new ExchangeProviderRegistry([providerFactory, .. additionalProviders]);
+        Sessions = new ExchangeSessionCoordinator(ConnectionManager, registry, settings, SettingsStore, credentialCoordinator, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExchangeSessionCoordinator>.Instance);
         Host = new LocalMcpServerHost(
             settings,
             tokenService,
@@ -114,7 +121,8 @@ internal sealed class TestServerContext : IAsyncDisposable
             TradingControl,
             AuditLog,
             SafeLog,
-            new ExchangeProviderRegistry([providerFactory]),
+            registry,
+            Sessions,
             OAuth,
             logger);
     }
@@ -122,6 +130,7 @@ internal sealed class TestServerContext : IAsyncDisposable
     private sealed class UnavailableProviderFactory : IExchangeProviderFactory
     {
         public string ProviderName => "Bybit";
+        public ExchangeProviderDescriptor Descriptor { get; } = new(new ExchangeId("bybit"), "Bybit", ProviderCapabilities.MarketData | ProviderCapabilities.AccountRead | ProviderCapabilities.PrivateStream | ProviderCapabilities.History | ProviderCapabilities.TradingWrite, [TradingEnvironment.Demo, TradingEnvironment.Live], []);
         public IMarketDataProvider CreateMarketDataProvider(TradingEnvironment environment) => new UnavailableMarketData();
         public IExchangeProviderConnection CreateConnection(TradingEnvironment environment, ExchangeCredentialSet credentials) => throw new NotSupportedException();
     }

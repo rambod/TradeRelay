@@ -16,9 +16,10 @@ internal sealed class TradingTools(
 {
     [McpServerTool(Name = "execute_prepared_order", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true, UseStructuredContent = true)]
     [Description("Executes one approved, unexpired immutable plan against the selected Bybit environment exactly once and reconciles its state. Live additionally requires explicit desktop session enablement.")]
-    public async Task<ToolResult<OrderSubmissionResult>> ExecutePreparedOrderAsync(string preparationId, CancellationToken cancellationToken = default)
+    public async Task<ToolResult<OrderSubmissionResult>> ExecutePreparedOrderAsync(string preparationId, string? exchange = null, CancellationToken cancellationToken = default)
     {
         string correlationId = ToolResponse.NewCorrelationId();
+        if (!IsBybit(exchange)) return Unsupported<OrderSubmissionResult>(correlationId);
         if (!Guid.TryParse(preparationId, out Guid id)) return ToolResponse.Correlated<OrderSubmissionResult>(false, "VALIDATION_FAILED", "preparationId is invalid.", null, correlationId, settings.Bybit.Environment, timeProvider);
         try
         {
@@ -30,7 +31,7 @@ internal sealed class TradingTools(
 
     [McpServerTool(Name = "cancel_order", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Cancels one explicit Bybit order ID in the selected enabled environment and reconciles the result.")]
-    public async Task<ToolResult<OperationResult>> CancelOrderAsync(string symbol, string exchangeOrderId, CancellationToken cancellationToken = default) => await RunOperationAsync((id, ct) => execution.CancelAsync(symbol, exchangeOrderId, id, ct), cancellationToken).ConfigureAwait(false);
+    public async Task<ToolResult<OperationResult>> CancelOrderAsync(string symbol, string exchangeOrderId, string? exchange = null, CancellationToken cancellationToken = default) => !IsBybit(exchange) ? Unsupported<OperationResult>(ToolResponse.NewCorrelationId()) : await RunOperationAsync((id, ct) => execution.CancelAsync(symbol, exchangeOrderId, id, ct), cancellationToken).ConfigureAwait(false);
 
     [McpServerTool(Name = "cancel_all_orders", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Cancels active USDT-linear orders only after explicit user intent. confirm must be true. Live requires a clientRequestId and a separately approved liveConfirmationId.")]
@@ -39,9 +40,11 @@ internal sealed class TradingTools(
         string? symbol = null,
         string? clientRequestId = null,
         string? liveConfirmationId = null,
+        string? exchange = null,
         CancellationToken cancellationToken = default)
     {
         string correlationId = ToolResponse.NewCorrelationId();
+        if (!IsBybit(exchange)) return Unsupported<LiveActionOutcome<OperationResult>>(correlationId);
         try
         {
             var result = await execution.CancelAllAsync(confirm, symbol, clientRequestId, liveConfirmationId, correlationId, cancellationToken).ConfigureAwait(false);
@@ -57,9 +60,11 @@ internal sealed class TradingTools(
         decimal? quantity = null,
         string? clientRequestId = null,
         string? liveConfirmationId = null,
+        string? exchange = null,
         CancellationToken cancellationToken = default)
     {
         string correlationId = ToolResponse.NewCorrelationId();
+        if (!IsBybit(exchange)) return Unsupported<LiveActionOutcome<OrderSubmissionResult>>(correlationId);
         try
         {
             var result = await execution.CloseAsync(symbol, quantity, clientRequestId, liveConfirmationId, correlationId, cancellationToken).ConfigureAwait(false);
@@ -70,7 +75,7 @@ internal sealed class TradingTools(
 
     [McpServerTool(Name = "set_trading_stop", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = true, UseStructuredContent = true)]
     [Description("Normalizes and applies full-position stop-loss and optional take-profit protection to one Bybit position in the selected enabled environment.")]
-    public async Task<ToolResult<OperationResult>> SetTradingStopAsync(string symbol, decimal stopLoss, decimal? takeProfit = null, CancellationToken cancellationToken = default) => await RunOperationAsync((id, ct) => execution.SetTradingStopAsync(symbol, stopLoss, takeProfit, id, ct), cancellationToken).ConfigureAwait(false);
+    public async Task<ToolResult<OperationResult>> SetTradingStopAsync(string symbol, decimal stopLoss, decimal? takeProfit = null, string? exchange = null, CancellationToken cancellationToken = default) => !IsBybit(exchange) ? Unsupported<OperationResult>(ToolResponse.NewCorrelationId()) : await RunOperationAsync((id, ct) => execution.SetTradingStopAsync(symbol, stopLoss, takeProfit, id, ct), cancellationToken).ConfigureAwait(false);
 
     [McpServerTool(Name = "get_live_action_confirmation", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Gets one non-secret Live action confirmation by ID without approving or executing it.")]
@@ -98,4 +103,7 @@ internal sealed class TradingTools(
         }
         catch (ProviderException exception) { return ToolResponse.Correlated<OperationResult>(false, exception.Code, exception.Message, null, correlationId, settings.Bybit.Environment, timeProvider); }
     }
+
+    private static bool IsBybit(string? exchange) => string.IsNullOrWhiteSpace(exchange) || exchange.Trim().Equals("bybit", StringComparison.OrdinalIgnoreCase);
+    private ToolResult<T> Unsupported<T>(string correlationId) => ToolResponse.Correlated<T>(false, "CAPABILITY_NOT_SUPPORTED", "Trading writes are supported only for Bybit. The requested exchange was not invoked.", default, correlationId, settings.Bybit.Environment, timeProvider);
 }

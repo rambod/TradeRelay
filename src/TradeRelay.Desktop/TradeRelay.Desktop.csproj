@@ -35,6 +35,8 @@
   <ItemGroup>
     <ProjectReference Include="..\TradeRelay.Core\TradeRelay.Core.csproj" />
     <ProjectReference Include="..\TradeRelay.Providers.Bybit\TradeRelay.Providers.Bybit.csproj" />
+    <ProjectReference Include="..\TradeRelay.Providers.Binance\TradeRelay.Providers.Binance.csproj" />
+    <ProjectReference Include="..\TradeRelay.Providers.KuCoin\TradeRelay.Providers.KuCoin.csproj" />
   </ItemGroup>
 
   <ItemGroup>

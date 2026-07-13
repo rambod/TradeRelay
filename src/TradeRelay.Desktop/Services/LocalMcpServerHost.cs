@@ -29,6 +29,7 @@ internal sealed class LocalMcpServerHost(
     AuditLogService auditLog,
     SafeLogService safeLog,
     IExchangeProviderRegistry providerRegistry,
+    IExchangeSessionCoordinator sessionCoordinator,
     OAuthPairingService oauthPairing,
     ILogger<LocalMcpServerHost> logger) : IHostedService
 {
@@ -253,6 +254,7 @@ internal sealed class LocalMcpServerHost(
         builder.Services.AddSingleton(auditLog);
         builder.Services.AddSingleton(safeLog);
         builder.Services.AddSingleton<IExchangeProviderRegistry>(providerRegistry);
+        builder.Services.AddSingleton(sessionCoordinator);
         builder.Services.AddSingleton(oauthPairing);
 
         builder.Services

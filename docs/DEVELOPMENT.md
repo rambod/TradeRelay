@@ -23,9 +23,11 @@ Update lock files with a plain `dotnet restore` only after intentionally changin
 
 ## Architecture boundaries
 
-TradeRelay remains one desktop process. `TradeRelay.Desktop` owns Avalonia, the child Kestrel MCP host, application services, and desktop-only abstractions. Core contains exchange-neutral models, risk logic, immutable stores, and safety contracts. All Bybit.Net types remain in `TradeRelay.Providers.Bybit`.
+TradeRelay remains one desktop process. `TradeRelay.Desktop` owns Avalonia, the child Kestrel MCP host, application services, and desktop-only abstractions. Core contains exchange-neutral models, risk logic, immutable stores, and safety contracts. Provider-specific transports, payloads, and SDK types remain inside their `TradeRelay.Providers.*` adapter; no adapter type crosses into Core or MCP.
 
-Do not add a database, microservice, MediatR, repository layer, background trading queue, persistent trading enablement, telemetry, or another exchange adapter as incidental work.
+Do not add a database, microservice, MediatR, repository layer, background trading queue, persistent trading enablement, telemetry, or exchange write capability as incidental work.
+
+Opt-in Binance and KuCoin integration tests read credentials only from `TRADERELAY_BINANCE_LIVE_API_KEY`, `TRADERELAY_BINANCE_LIVE_API_SECRET`, `TRADERELAY_KUCOIN_LIVE_API_KEY`, `TRADERELAY_KUCOIN_LIVE_API_SECRET`, and `TRADERELAY_KUCOIN_LIVE_API_PASSPHRASE`. They perform strictly read-only market, account, and stream checks.
 
 The canonical cross-client Agent Skill lives at `integrations/skills/traderelay-operator`. Validate it after every change with the `skill-creator` quick validator before packaging. The desktop project includes this directory under `Skills/traderelay-operator` in build and publish output.
 

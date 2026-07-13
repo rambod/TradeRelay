@@ -19,22 +19,23 @@ internal sealed class ExchangeProviderRegistry : IExchangeProviderRegistry
     public bool TryGetFactory(ExchangeId exchange, out IExchangeProviderFactory? factory) => _factories.TryGetValue(exchange, out factory);
 }
 
+internal sealed record ProviderSessionAccess(
+    ExchangeProviderDescriptor Descriptor,
+    TradingEnvironment Environment,
+    IMarketDataProvider MarketData,
+    ITradingAccountProvider? Account,
+    IExchangeHistoryProvider? History,
+    IExchangeStream? Stream,
+    ProviderConnectionSnapshot Snapshot);
+
 internal interface IExchangeSessionCoordinator
 {
+    event EventHandler<ProviderSessionAccess>? StateChanged;
     IReadOnlyList<ExchangeProfileKey> ConnectedProfiles { get; }
-    bool TryGet(ExchangeProfileKey profile, out ExchangeConnectionManager? manager);
-}
-
-internal sealed class ExchangeSessionCoordinator(ExchangeConnectionManager bybit) : IExchangeSessionCoordinator
-{
-    public IReadOnlyList<ExchangeProfileKey> ConnectedProfiles => bybit.Snapshot.CredentialLoaded
-        ? [new ExchangeProfileKey(new ExchangeId("bybit"), bybit.Snapshot.Environment)]
-        : [];
-
-    public bool TryGet(ExchangeProfileKey profile, out ExchangeConnectionManager? manager)
-    {
-        bool found = profile.Exchange == new ExchangeId("bybit") && profile.Environment == bybit.Snapshot.Environment;
-        manager = found ? bybit : null;
-        return found;
-    }
+    IReadOnlyList<ProviderSessionAccess> Sessions { get; }
+    bool TryResolve(string? exchange, out ProviderSessionAccess? session, out string code, out string message);
+    Task<ExchangeConnectionResult> TestAsync(ExchangeId exchange, ExchangeCredentialSet credentials, CancellationToken cancellationToken);
+    Task<ExchangeConnectionResult> SaveAsync(ExchangeId exchange, ExchangeCredentialSet credentials, bool remember, CancellationToken cancellationToken);
+    Task DeleteAsync(ExchangeId exchange, CancellationToken cancellationToken);
+    Task SelectAsync(ExchangeId exchange, CancellationToken cancellationToken);
 }

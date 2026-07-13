@@ -3,7 +3,7 @@ namespace TradeRelay.Desktop.Mcp;
 internal static class McpServerInstructions
 {
     public const string Value =
-        "TradeRelay is a local operator-controlled trading bridge. Begin with get_system_status and make the exchange and environment explicit. Read tools require traderelay.read; planning tools require traderelay.plan; write tools require traderelay.trade. Before any Demo or Live execution, call prepare_order, " +
+        "TradeRelay is a local operator-controlled trading bridge. Begin with get_system_status and make the exchange and environment explicit. Bybit is the only write-capable exchange; Binance and KuCoin are read-only and reject write requests. Read tools require traderelay.read; planning tools require traderelay.plan; write tools require traderelay.trade. Before any Demo or Live execution, call prepare_order, " +
         "present the full order and risk summary to the user, and obtain " +
         "approval through TradeRelay when required. Never request withdrawals, transfers, deposits, or credential data. Treat order " +
         "acknowledgements as provisional until TradeRelay reports a reconciled status. Respect rate limits. " +

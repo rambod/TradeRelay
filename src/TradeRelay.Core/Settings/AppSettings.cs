@@ -9,7 +9,7 @@ namespace TradeRelay.Core.Settings;
 public sealed class AppSettings
 {
     /// <summary>Gets the persisted settings schema version.</summary>
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 3;
 
     /// <summary>
     /// Gets the local MCP server settings.
@@ -33,6 +33,8 @@ public sealed class AppSettings
                 ["live"] = false,
             },
         },
+        ["binance"] = LiveReadOnlyProfile(),
+        ["kucoin"] = LiveReadOnlyProfile(),
     };
 
     /// <summary>
@@ -55,6 +57,12 @@ public sealed class AppSettings
 
         return value;
     }
+
+    private static ExchangeProviderSettings LiveReadOnlyProfile() => new()
+    {
+        Environment = TradingEnvironment.Live,
+        RememberByEnvironment = new Dictionary<string, bool>(StringComparer.Ordinal) { ["live"] = false },
+    };
 }
 
 /// <summary>

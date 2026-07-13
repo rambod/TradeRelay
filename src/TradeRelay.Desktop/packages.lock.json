@@ -263,11 +263,23 @@
       "traderelay.core": {
         "type": "Project"
       },
+      "traderelay.providers.binance": {
+        "type": "Project",
+        "dependencies": {
+          "TradeRelay.Core": "[1.3.0, )"
+        }
+      },
       "traderelay.providers.bybit": {
         "type": "Project",
         "dependencies": {
           "Bybit.Net": "[7.1.0, )",
-          "TradeRelay.Core": "[1.0.0, )"
+          "TradeRelay.Core": "[1.3.0, )"
+        }
+      },
+      "traderelay.providers.kucoin": {
+        "type": "Project",
+        "dependencies": {
+          "TradeRelay.Core": "[1.3.0, )"
         }
       }
     },

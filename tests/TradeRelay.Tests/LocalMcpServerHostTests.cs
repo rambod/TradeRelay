@@ -181,6 +181,8 @@ public sealed class LocalMcpServerHostTests
         CallToolResult duplicate = await execute.CallAsync(new Dictionary<string, object?> { ["preparationId"] = plan.PreparationId.ToString() });
         Assert.Contains("DUPLICATE_REQUEST", duplicate.StructuredContent?.GetRawText(), StringComparison.Ordinal);
 
+        CallToolResult unsupported = await Assert.Single(tools, item => item.Name == "cancel_all_orders").CallAsync(new Dictionary<string, object?> { ["confirm"] = true, ["exchange"] = "binance" });
+        Assert.Contains("CAPABILITY_NOT_SUPPORTED", unsupported.StructuredContent?.GetRawText(), StringComparison.Ordinal);
         CallToolResult cancelled = await Assert.Single(tools, item => item.Name == "cancel_order").CallAsync(new Dictionary<string, object?> { ["symbol"] = "BTCUSDT", ["exchangeOrderId"] = "exchange-1" });
         Assert.Contains("\"success\":true", cancelled.StructuredContent?.GetRawText(), StringComparison.OrdinalIgnoreCase);
         CallToolResult cancelAll = await Assert.Single(tools, item => item.Name == "cancel_all_orders").CallAsync(new Dictionary<string, object?> { ["confirm"] = true });

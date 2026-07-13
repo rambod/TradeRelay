@@ -1,6 +1,6 @@
 ---
 name: traderelay-operator
-description: Safely inspect exchange accounts and operate TradeRelay 1.3+ MCP workflows. Use for provider/environment status, positions, orders, Long/Short exposure, runtime errors, risk sizing, immutable order preparation, desktop approval, explicitly enabled Bybit execution, cancellation, reduce-only closing, protection, and post-write reconciliation. Never use it to enable Live trading automatically or to retry an ambiguous submission.
+description: Safely inspect Bybit, Binance, and KuCoin accounts and operate TradeRelay 1.4+ MCP workflows. Use for provider/environment status, positions, orders, Long/Short exposure, runtime errors, risk sizing, immutable order preparation, desktop approval, explicitly enabled Bybit execution, cancellation, reduce-only closing, protection, and post-write reconciliation. Never use it to enable Live trading automatically or to retry an ambiguous submission.
 ---
 
 # TradeRelay Operator

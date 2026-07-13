@@ -2,7 +2,7 @@
 
 <img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="128" height="128">
 
-TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.3.0` adds scoped OAuth pairing, direct Codex/Claude Code/Gemini CLI installation, and the canonical `traderelay-operator` skill while Bybit remains the only connected and write-capable adapter.
+TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.4.0` can inspect Bybit, Binance, and KuCoin concurrently while preserving Bybit as the only write-capable adapter.
 
 TradeRelay is not a hosted trading service, autonomous strategy, signal provider, or financial adviser. It does not persist trading enablement, blindly retry ambiguous submissions, or clean up exchange orders when the application stops.
 
@@ -53,7 +53,7 @@ Download the archive for your platform plus `SHA256SUMS` from the GitHub Release
 sha256sum -c SHA256SUMS
 ```
 
-On macOS, `shasum -a 256 TradeRelay-1.3.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.3.0-win-x64.zip -Algorithm SHA256`.
+On macOS, `shasum -a 256 TradeRelay-1.4.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.4.0-win-x64.zip -Algorithm SHA256`.
 
 Packages clearly report their signing state in `release-metadata.json`. Unsigned builds are permitted when maintainers have not configured signing credentials; the operating system may show an unverified-publisher warning. Do not bypass a warning unless the checksum matches the official release.
 
@@ -72,9 +72,15 @@ Linux archives install nothing automatically. Extract the archive, read `README-
 
 For Live, select Live credentials, verify every warning, review the complete risk summary, and use the exact desktop confirmation. Use **Disable New Trading Actions** whenever you no longer need writes.
 
-## Bybit capability
+## Exchange capabilities
 
-TradeRelay supports Bybit Unified Trading Account and USDT-linear perpetuals. Public market data, account inspection, positions, open orders, risk calculation, prepared plans, Demo execution, Live session gating, cancellation, reduce-only position closing, trading-stop updates, and reconciliation are normalized behind exchange-neutral contracts. Binance and other exchange adapters are future work.
+| Exchange | Profiles | Read capabilities | Writes |
+| --- | --- | --- | --- |
+| Bybit | Demo and Live | Market, account, positions, orders, history, executions, private stream | Guarded Demo/Live writes |
+| Binance | Live | USD-M Futures market, account, balances, positions, open orders, history, executions, private stream | Not supported |
+| KuCoin | Live | USDT Futures market, account, balance, positions, open orders, history, executions, private stream | Not supported |
+
+All providers use normalized Core contracts and can connect concurrently. MCP read tools accept an optional `exchange`; omission uses the selected provider. Every write tool remains Bybit-only, and an explicit Binance or KuCoin write fails with `CAPABILITY_NOT_SUPPORTED` before a write lease or provider call.
 
 ## Local data and privacy
 
@@ -121,6 +127,8 @@ Project structure:
 src/TradeRelay.Desktop/         Avalonia shell, in-process MCP host, and application services
 src/TradeRelay.Core/            Exchange-neutral domain, settings, risk, and safety contracts
 src/TradeRelay.Providers.Bybit/ Bybit adapter boundary; all Bybit.Net types remain here
+src/TradeRelay.Providers.Binance/ Binance USD-M Futures read-only adapter
+src/TradeRelay.Providers.KuCoin/ KuCoin USDT Futures read-only adapter
 tests/TradeRelay.Tests/         Unit and loopback integration tests
 integrations/skills/            Canonical cross-client TradeRelay operator skill
 eng/                            Reproducible scans, manifests, and packaging scripts
@@ -131,7 +139,7 @@ See [development](docs/DEVELOPMENT.md) and [contributing](CONTRIBUTING.md) for t
 
 ## Release status
 
-Current version: `1.3.0`
+Current version: `1.4.0`
 
 | Milestone | Version |
 | --- | --- |
@@ -145,6 +153,7 @@ Current version: `1.3.0`
 | Operator console and provider foundation | `1.1.0` |
 | Operations lifecycle audit and Error Center | `1.2.0` |
 | OAuth pairing, direct client installation, and operator skill | `1.3.0` |
+| Binance and KuCoin read-only adapters | `1.4.0` |
 
 Release maintainers should follow [the release procedure](docs/RELEASE.md). Automated real-Live write tests are prohibited.
 

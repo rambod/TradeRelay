@@ -10,7 +10,7 @@ namespace TradeRelay.Desktop.Mcp;
 [McpServerToolType]
 internal sealed class OperationsTools(
     IExchangeProviderRegistry registry,
-    ExchangeConnectionManager connections,
+    IExchangeSessionCoordinator sessions,
     AuditLogService audit,
     SafeLogService safeLog,
     AppSettings settings,
@@ -57,10 +57,12 @@ internal sealed class OperationsTools(
 
     private Task<ToolResult<T>> RunHistoryAsync<T>(Func<IExchangeHistoryProvider, Task<T>> action, string message, string? exchange)
     {
-        if (!string.IsNullOrWhiteSpace(exchange) && !exchange.Trim().Equals("bybit", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(ToolResponse.Failure<T>("EXCHANGE_NOT_FOUND", "The requested exchange is not registered.", settings.Bybit.Environment, timeProvider));
-        return connections.History is null
-            ? Task.FromResult(ToolResponse.Failure<T>("EXCHANGE_NOT_CONNECTED", "Connect the selected exchange before requesting authenticated history.", settings.Bybit.Environment, timeProvider))
-            : ToolResponse.RunAsync(_ => action(connections.History), message, settings.Bybit.Environment, timeProvider, CancellationToken.None);
+        if (!sessions.TryResolve(exchange, out ProviderSessionAccess? session, out string code, out string error) || session is null)
+            return Task.FromResult(ToolResponse.Failure<T>(code, error, settings.Bybit.Environment, timeProvider));
+        if (!session.Descriptor.Capabilities.HasFlag(ProviderCapabilities.History))
+            return Task.FromResult(ToolResponse.Failure<T>("CAPABILITY_NOT_SUPPORTED", $"{session.Descriptor.DisplayName} does not provide normalized history.", session.Environment, timeProvider));
+        return session.History is null
+            ? Task.FromResult(ToolResponse.Failure<T>("EXCHANGE_NOT_CONNECTED", "Connect the selected exchange before requesting authenticated history.", session.Environment, timeProvider))
+            : ToolResponse.RunAsync(_ => action(session.History), message, session.Environment, timeProvider, CancellationToken.None);
     }
 }

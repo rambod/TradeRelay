@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using TradeRelay.Core.Models;
 using TradeRelay.Core.Providers;
@@ -5,158 +6,111 @@ using TradeRelay.Core.Providers;
 namespace TradeRelay.Desktop.Services;
 
 internal sealed class TradingLifecycleService(
-    ExchangeConnectionManager connections,
+    IExchangeSessionCoordinator sessions,
     AuditLogService audit,
     TimeProvider timeProvider) : BackgroundService
 {
-    private static readonly ExchangeId Bybit = new("bybit");
     private readonly SemaphoreSlim _reconcileLock = new(1, 1);
     private readonly Dictionary<string, string> _positionFingerprints = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _orderFingerprints = new(StringComparer.Ordinal);
-    private IExchangeStream? _attachedStream;
+    private readonly ConcurrentDictionary<IExchangeStream, ProviderSessionAccess> _attachedStreams = new(ReferenceEqualityComparer.Instance);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        connections.StateChanged += OnConnectionChanged;
-        AttachStream();
-        if (connections.Account is not null) await ReconcileAsync("baseline", stoppingToken).ConfigureAwait(false);
+        sessions.StateChanged += OnSessionChanged;
+        AttachStreams();
+        await ReconcileAllAsync("baseline", stoppingToken).ConfigureAwait(false);
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(30), timeProvider, stoppingToken).ConfigureAwait(false);
-                if (connections.Account is not null) await ReconcileAsync("scheduled", stoppingToken).ConfigureAwait(false);
+                await ReconcileAllAsync("scheduled", stoppingToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-        finally
+        finally { sessions.StateChanged -= OnSessionChanged; DetachStreams(); }
+    }
+
+    internal Task ReconcileNowAsync(CancellationToken cancellationToken) => ReconcileAllAsync("manual", cancellationToken);
+
+    private void OnSessionChanged(object? sender, ProviderSessionAccess session)
+    {
+        AttachStreams();
+        if (session.Account is not null) _ = ReconcileAsync(session, "connection", CancellationToken.None);
+        else
         {
-            connections.StateChanged -= OnConnectionChanged;
-            DetachStream();
+            string prefix = session.Descriptor.Id.Value + ":";
+            foreach (string key in _positionFingerprints.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)).ToArray()) _positionFingerprints.Remove(key);
+            foreach (string key in _orderFingerprints.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)).ToArray()) _orderFingerprints.Remove(key);
         }
     }
 
-    internal async Task ReconcileNowAsync(CancellationToken cancellationToken) => await ReconcileAsync("manual", cancellationToken).ConfigureAwait(false);
-
-    private void OnConnectionChanged(object? sender, ProviderConnectionSnapshot snapshot)
+    private void AttachStreams()
     {
-        AttachStream();
-        if (snapshot.CredentialLoaded) _ = ReconcileAsync("connection", CancellationToken.None);
-        else { _positionFingerprints.Clear(); _orderFingerprints.Clear(); }
+        IExchangeStream[] active = sessions.Sessions.Where(item => item.Stream is not null).Select(item => item.Stream!).ToArray();
+        foreach (IExchangeStream removed in _attachedStreams.Keys.Where(stream => !active.Contains(stream, ReferenceEqualityComparer.Instance)).ToArray()) Detach(removed);
+        foreach (ProviderSessionAccess session in sessions.Sessions.Where(item => item.Stream is not null))
+        {
+            IExchangeStream stream = session.Stream!;
+            if (!_attachedStreams.TryAdd(stream, session)) { _attachedStreams[stream] = session; continue; }
+            stream.OrderUpdated += OnOrderUpdated; stream.ExecutionUpdated += OnExecutionUpdated; stream.PositionUpdated += OnPositionUpdated;
+        }
+    }
+    private void DetachStreams() { foreach (IExchangeStream stream in _attachedStreams.Keys.ToArray()) Detach(stream); }
+    private void Detach(IExchangeStream stream) { stream.OrderUpdated -= OnOrderUpdated; stream.ExecutionUpdated -= OnExecutionUpdated; stream.PositionUpdated -= OnPositionUpdated; _attachedStreams.TryRemove(stream, out _); }
+
+    private void OnOrderUpdated(object? sender, OrderUpdate update) { if (sender is IExchangeStream stream && _attachedStreams.TryGetValue(stream, out ProviderSessionAccess? session)) _ = WriteAsync(session, TradingLifecycleKind.Order, "private_stream_order", "OBSERVED", update.Symbol, exchangeOrderId: update.ExchangeOrderId, state: update.Status); }
+    private void OnExecutionUpdated(object? sender, ExecutionUpdate update) { if (sender is IExchangeStream stream && _attachedStreams.TryGetValue(stream, out ProviderSessionAccess? session)) _ = WriteAsync(session, TradingLifecycleKind.Execution, "private_stream_execution", "OBSERVED", update.Symbol, exchangeOrderId: update.ExchangeOrderId, quantity: update.Quantity, price: update.Price, state: "Filled"); }
+    private void OnPositionUpdated(object? sender, PositionUpdate update) { if (sender is IExchangeStream stream && _attachedStreams.TryGetValue(stream, out ProviderSessionAccess? session)) _ = WriteAsync(session, TradingLifecycleKind.Position, "private_stream_position", "OBSERVED", update.Symbol, update.Side, quantity: update.Size, state: update.Size == 0m ? "Closed" : "Open"); }
+
+    private async Task ReconcileAllAsync(string reason, CancellationToken cancellationToken)
+    {
+        foreach (ProviderSessionAccess session in sessions.Sessions.Where(item => item.Account is not null)) await ReconcileAsync(session, reason, cancellationToken).ConfigureAwait(false);
     }
 
-    private void AttachStream()
+    private async Task ReconcileAsync(ProviderSessionAccess session, string reason, CancellationToken cancellationToken)
     {
-        IExchangeStream? current = connections.Stream;
-        if (ReferenceEquals(current, _attachedStream)) return;
-        DetachStream();
-        _attachedStream = current;
-        if (current is null) return;
-        current.OrderUpdated += OnOrderUpdated;
-        current.ExecutionUpdated += OnExecutionUpdated;
-        current.PositionUpdated += OnPositionUpdated;
-    }
-
-    private void DetachStream()
-    {
-        if (_attachedStream is null) return;
-        _attachedStream.OrderUpdated -= OnOrderUpdated;
-        _attachedStream.ExecutionUpdated -= OnExecutionUpdated;
-        _attachedStream.PositionUpdated -= OnPositionUpdated;
-        _attachedStream = null;
-    }
-
-    private void OnOrderUpdated(object? sender, OrderUpdate update) => _ = WriteAsync(TradingLifecycleKind.Order, "private_stream_order", "OBSERVED", update.Symbol, null, update.ExchangeOrderId, null, null, null, update.Status);
-    private void OnExecutionUpdated(object? sender, ExecutionUpdate update) => _ = WriteAsync(TradingLifecycleKind.Execution, "private_stream_execution", "OBSERVED", update.Symbol, null, update.ExchangeOrderId, null, update.Quantity, update.Price, "Filled");
-    private void OnPositionUpdated(object? sender, PositionUpdate update) => _ = WriteAsync(TradingLifecycleKind.Position, "private_stream_position", "OBSERVED", update.Symbol, update.Side, null, null, update.Size, null, update.Size == 0m ? "Closed" : "Open");
-
-    private async Task ReconcileAsync(string reason, CancellationToken cancellationToken)
-    {
-        if (!await _reconcileLock.WaitAsync(0, cancellationToken).ConfigureAwait(false)) return;
+        await _reconcileLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            ITradingAccountProvider? account = connections.Account;
-            if (account is null) return;
-            IReadOnlyList<PositionSnapshot> positions = await account.GetPositionsAsync(null, cancellationToken).ConfigureAwait(false);
-            IReadOnlyList<OrderSnapshot> orders = await account.GetOpenOrdersAsync(null, cancellationToken).ConfigureAwait(false);
-            await EmitPositionChangesAsync(positions, reason, cancellationToken).ConfigureAwait(false);
-            await EmitOrderChangesAsync(orders, reason, cancellationToken).ConfigureAwait(false);
-            await WriteAsync(TradingLifecycleKind.Reconciliation, $"{reason}_reconciliation", "OK", state: $"{positions.Count} positions; {orders.Count} open orders", cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (session.Account is null) return;
+            IReadOnlyList<PositionSnapshot> positions = await session.Account.GetPositionsAsync(null, cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<OrderSnapshot> orders = await session.Account.GetOpenOrdersAsync(null, cancellationToken).ConfigureAwait(false);
+            await EmitPositionChangesAsync(session, positions, reason, cancellationToken).ConfigureAwait(false);
+            await EmitOrderChangesAsync(session, orders, reason, cancellationToken).ConfigureAwait(false);
+            await WriteAsync(session, TradingLifecycleKind.Reconciliation, $"{reason}_reconciliation", "OK", state: $"{positions.Count} positions; {orders.Count} open orders", cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
-        catch
-        {
-            await WriteAsync(TradingLifecycleKind.SafeError, "reconciliation_failed", "FAILED", state: "Current exchange state could not be reconciled.", errorCode: "RECONCILIATION_UNAVAILABLE", cancellationToken: CancellationToken.None).ConfigureAwait(false);
-        }
+        catch { await WriteAsync(session, TradingLifecycleKind.SafeError, "reconciliation_failed", "FAILED", state: "Current exchange state could not be reconciled.", errorCode: "RECONCILIATION_UNAVAILABLE", cancellationToken: CancellationToken.None).ConfigureAwait(false); }
         finally { _reconcileLock.Release(); }
     }
 
-    private async Task EmitPositionChangesAsync(IReadOnlyList<PositionSnapshot> current, string reason, CancellationToken cancellationToken)
+    private async Task EmitPositionChangesAsync(ProviderSessionAccess session, IReadOnlyList<PositionSnapshot> current, string reason, CancellationToken cancellationToken)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string prefix = session.Descriptor.Id.Value + ":"; var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (PositionSnapshot position in current)
         {
-            string key = $"{position.Symbol}:{position.Side}";
-            string fingerprint = $"{position.Size:G29}|{position.EntryPrice:G29}|{position.MarkPrice:G29}|{position.StopLoss:G29}|{position.TakeProfit:G29}";
-            seen.Add(key);
+            string key = $"{prefix}{position.Symbol}:{position.Side}", fingerprint = $"{position.Size:G29}|{position.EntryPrice:G29}|{position.MarkPrice:G29}|{position.StopLoss:G29}|{position.TakeProfit:G29}"; seen.Add(key);
             if (_positionFingerprints.TryGetValue(key, out string? previous) && previous == fingerprint) continue;
             _positionFingerprints[key] = fingerprint;
-            await WriteAsync(TradingLifecycleKind.Position, $"{reason}_position", "CHANGED", position.Symbol, position.Side, quantity: position.Size, price: position.MarkPrice, state: "Open", cancellationToken: cancellationToken).ConfigureAwait(false);
+            await WriteAsync(session, TradingLifecycleKind.Position, $"{reason}_position", "CHANGED", position.Symbol, position.Side, quantity: position.Size, price: position.MarkPrice, state: "Open", cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-        foreach (string removed in _positionFingerprints.Keys.Where(key => !seen.Contains(key)).ToArray())
-        {
-            _positionFingerprints.Remove(removed);
-            string symbol = removed.Split(':', 2)[0];
-            await WriteAsync(TradingLifecycleKind.Position, $"{reason}_position", "CHANGED", symbol, quantity: 0m, state: "Closed or absent", cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        foreach (string removed in _positionFingerprints.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal) && !seen.Contains(key)).ToArray()) { _positionFingerprints.Remove(removed); string symbol = removed[prefix.Length..].Split(':', 2)[0]; await WriteAsync(session, TradingLifecycleKind.Position, $"{reason}_position", "CHANGED", symbol, quantity: 0m, state: "Closed or absent", cancellationToken: cancellationToken).ConfigureAwait(false); }
     }
 
-    private async Task EmitOrderChangesAsync(IReadOnlyList<OrderSnapshot> current, string reason, CancellationToken cancellationToken)
+    private async Task EmitOrderChangesAsync(ProviderSessionAccess session, IReadOnlyList<OrderSnapshot> current, string reason, CancellationToken cancellationToken)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string prefix = session.Descriptor.Id.Value + ":"; var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (OrderSnapshot order in current)
         {
-            string fingerprint = $"{order.Status}|{order.FilledQuantity:G29}|{order.Quantity:G29}";
-            seen.Add(order.ExchangeOrderId);
-            if (_orderFingerprints.TryGetValue(order.ExchangeOrderId, out string? previous) && previous == fingerprint) continue;
-            _orderFingerprints[order.ExchangeOrderId] = fingerprint;
-            await WriteAsync(TradingLifecycleKind.Order, $"{reason}_order", "CHANGED", order.Symbol, order.Side, order.ExchangeOrderId, order.ClientOrderId, order.Quantity, order.Price, order.Status, cancellationToken: cancellationToken).ConfigureAwait(false);
+            string key = prefix + order.ExchangeOrderId, fingerprint = $"{order.Status}|{order.FilledQuantity:G29}|{order.Quantity:G29}"; seen.Add(key);
+            if (_orderFingerprints.TryGetValue(key, out string? previous) && previous == fingerprint) continue;
+            _orderFingerprints[key] = fingerprint;
+            await WriteAsync(session, TradingLifecycleKind.Order, $"{reason}_order", "CHANGED", order.Symbol, order.Side, order.ExchangeOrderId, order.ClientOrderId, order.Quantity, order.Price, order.Status, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-        foreach (string removed in _orderFingerprints.Keys.Where(key => !seen.Contains(key)).ToArray())
-        {
-            _orderFingerprints.Remove(removed);
-            await WriteAsync(TradingLifecycleKind.Order, $"{reason}_order", "CHANGED", exchangeOrderId: removed, state: "No longer open", cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        foreach (string removed in _orderFingerprints.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal) && !seen.Contains(key)).ToArray()) { _orderFingerprints.Remove(removed); await WriteAsync(session, TradingLifecycleKind.Order, $"{reason}_order", "CHANGED", exchangeOrderId: removed[prefix.Length..], state: "No longer open", cancellationToken: cancellationToken).ConfigureAwait(false); }
     }
 
-    private Task<bool> WriteAsync(
-        TradingLifecycleKind kind,
-        string action,
-        string result,
-        string? symbol = null,
-        TradeSide? side = null,
-        string? exchangeOrderId = null,
-        string? clientOrderId = null,
-        decimal? quantity = null,
-        decimal? price = null,
-        string? state = null,
-        string? errorCode = null,
-        CancellationToken cancellationToken = default) => audit.TryWriteLifecycleAsync(new TradingLifecycleEvent(
-            2,
-            Guid.NewGuid(),
-            Guid.NewGuid().ToString("N"),
-            timeProvider.GetUtcNow(),
-            Bybit,
-            connections.Snapshot.Environment,
-            kind,
-            action,
-            result,
-            symbol,
-            side,
-            exchangeOrderId,
-            clientOrderId,
-            quantity,
-            price,
-            state,
-            errorCode), cancellationToken);
+    private Task<bool> WriteAsync(ProviderSessionAccess session, TradingLifecycleKind kind, string action, string result, string? symbol = null, TradeSide? side = null, string? exchangeOrderId = null, string? clientOrderId = null, decimal? quantity = null, decimal? price = null, string? state = null, string? errorCode = null, CancellationToken cancellationToken = default) => audit.TryWriteLifecycleAsync(new TradingLifecycleEvent(2, Guid.NewGuid(), Guid.NewGuid().ToString("N"), timeProvider.GetUtcNow(), session.Descriptor.Id, session.Environment, kind, action, result, symbol, side, exchangeOrderId, clientOrderId, quantity, price, state, errorCode), cancellationToken);
 }

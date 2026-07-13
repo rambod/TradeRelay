@@ -68,7 +68,7 @@ public sealed class ProviderFoundationTests
             TradeRelay.Core.Settings.AppSettings migrated = store.Load();
             TradeRelay.Core.Settings.AppSettings loadedAgain = store.Load();
 
-            Assert.Equal(2, migrated.SchemaVersion);
+            Assert.Equal(3, migrated.SchemaVersion);
             Assert.Equal(TradingEnvironment.Live, migrated.Bybit.Environment);
             Assert.True(migrated.Bybit.ShouldRemember(TradingEnvironment.Live));
             Assert.Equal(TradingEnvironment.Live, loadedAgain.Bybit.Environment);

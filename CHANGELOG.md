@@ -2,6 +2,22 @@
 
 All notable changes are documented here. TradeRelay uses semantic versioning; milestone tags before `1.0.0` are development releases.
 
+## [1.4.0] - 2026-07-13
+
+### Added
+
+- Live-only Binance USD-M Futures and KuCoin USDT Futures adapters for market data, account summaries, balances, positions, open orders, recent order/execution history, private-stream health, heartbeat renewal, and reconnect handling.
+- Concurrent provider-session coordination, dynamic provider credential fields including KuCoin passphrase, selected-provider status, and Operations exchange filtering.
+- Optional `exchange` routing across MCP market/account/history reads with stable multi-provider failure codes.
+
+### Changed
+
+- Lifecycle baseline, private-stream observation, reconnect reconciliation, and scheduled 30-second reconciliation now operate across all connected provider sessions.
+
+### Security
+
+- Binance and KuCoin advertise no write capability. Every provider trading method and every explicit non-Bybit MCP write returns `CAPABILITY_NOT_SUPPORTED` before acquiring a write lease or invoking a provider.
+
 ## [1.3.0] - 2026-07-13
 
 ### Added

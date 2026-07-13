@@ -19,6 +19,12 @@ Scopes are enforced at the MCP boundary: `traderelay.read` for inspection, `trad
 
 Client installers preview exact commands and targets, pass no secrets in arguments, reject conflicting `traderelay` entries, and uninstall only files marked as TradeRelay-owned.
 
+## Multi-exchange capability boundary
+
+Bybit is the only adapter advertising `TradingWrite`. Binance USD-M Futures and KuCoin USDT Futures are Live read-only adapters for normalized inspection and private-stream health. All three may connect concurrently, but supplying Binance or KuCoin to a write tool returns `CAPABILITY_NOT_SUPPORTED` before a write lease or provider invocation. Their adapter-level trading surfaces also reject every operation defensively.
+
+Credentials remain isolated by `exchange:environment` protected-storage identifiers. KuCoin's passphrase is treated as a secret field and follows the same non-serialization, redaction, and protected-storage rules as API secrets.
+
 ## Trading enablement
 
 Every application launch begins with trading disabled. Demo and Live must be enabled separately from the desktop after the MCP server, credentials, account access, risk settings, audit storage, and reconciliation path pass readiness checks.
