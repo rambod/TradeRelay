@@ -43,6 +43,7 @@ public sealed class ExchangeSessionCoordinatorTests
         Assert.Equal(2, viewModel.CredentialFields.Count);
         viewModel.SelectedExchange = "kucoin";
         Assert.Equal([ExchangeCredentials.ApiKeyField, ExchangeCredentials.ApiSecretField, ExchangeCredentials.PassphraseField], viewModel.CredentialFields.Select(item => item.Name));
+        await coordinator.SelectAsync(new ExchangeId("kucoin"), default);
         await coordinator.StopAsync(default);
         if (Directory.Exists(root)) Directory.Delete(root, true);
     }

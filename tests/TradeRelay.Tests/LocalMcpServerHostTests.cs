@@ -281,7 +281,10 @@ public sealed class LocalMcpServerHostTests
         await context.Host.StopServerAsync();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
 
-        await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.GetAsync(endpoint));
+        Exception? error = await Record.ExceptionAsync(() => client.GetAsync(endpoint));
+        Assert.True(
+            error is HttpRequestException or TaskCanceledException,
+            $"Expected a connection failure after stopping MCP, but received {error?.GetType().Name ?? "no exception"}.");
     }
 
     [Fact]

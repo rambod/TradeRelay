@@ -17,7 +17,8 @@ public sealed class AgentClientInstallerTests
         ClientInstallationResult installed = await installer.InstallAsync(AgentClientKind.Codex, "http://127.0.0.1:5050/mcp", default);
         Assert.True(installed.Success);
         Assert.Contains(runner.Calls, call => call.Arguments.SequenceEqual(preview.Commands[0].Arguments));
-        Assert.Contains(files.Directories, path => path.EndsWith(".agents/skills/traderelay-operator", StringComparison.Ordinal));
+        string skillPath = Path.Combine(".agents", "skills", "traderelay-operator");
+        Assert.Contains(files.Directories, path => path.EndsWith(skillPath, StringComparison.Ordinal));
 
         ClientInstallationResult removed = await installer.UninstallAsync(AgentClientKind.Codex, default);
         Assert.True(removed.Success);
