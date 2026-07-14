@@ -1,4 +1,5 @@
 using TradeRelay.Core.Models;
+using Avalonia.Controls;
 using TradeRelay.Desktop.Services;
 using TradeRelay.Desktop.ViewModels;
 using Xunit;
@@ -7,6 +8,19 @@ namespace TradeRelay.Tests;
 
 public sealed class MainWindowViewModelTests
 {
+    [Fact]
+    public async Task NavigationRail_UsesFixedPixelWidthsAtSupportedWindowSizes()
+    {
+        await using TestServerContext context = TestServerContext.Create();
+        using MainWindowViewModel viewModel = Create(context);
+
+        Assert.Equal(GridUnitType.Pixel, viewModel.NavigationRailWidth.GridUnitType);
+        Assert.Equal(216d, viewModel.NavigationRailWidth.Value);
+        viewModel.SetCompactNavigation(true);
+        Assert.Equal(GridUnitType.Pixel, viewModel.NavigationRailWidth.GridUnitType);
+        Assert.Equal(68d, viewModel.NavigationRailWidth.Value);
+    }
+
     [Fact]
     public async Task TokenAndConfigurationCommands_AreSafeAndClipboardReady()
     {
@@ -149,7 +163,7 @@ public sealed class MainWindowViewModelTests
         viewModel.TradingAcknowledged = true;
         await viewModel.EnableDemoTradingCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsDemoTradingEnabled);
-        Assert.Equal("TradingEnabled", viewModel.AccessStatus);
+        Assert.Equal("Trading enabled", viewModel.AccessStatus);
 
         await viewModel.StopServerCommand.ExecuteAsync(null);
         Assert.False(viewModel.IsDemoTradingEnabled);

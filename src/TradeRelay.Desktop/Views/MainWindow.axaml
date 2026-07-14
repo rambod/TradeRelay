@@ -9,15 +9,15 @@
     Width="1080" Height="720" MinWidth="900" MinHeight="640"
     Icon="avares://TradeRelay/Assets/TradeRelay.png"
     Background="{DynamicResource AppBackgroundBrush}">
-  <Grid RowDefinitions="64,*">
+  <Grid RowDefinitions="58,*">
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="{Binding NavigationRailWidth}" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
     <Border Grid.RowSpan="2" Background="{DynamicResource ShellBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="64,*,Auto">
-        <Grid Margin="18,0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="30" Height="30" CornerRadius="7" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+      <Grid RowDefinitions="58,*,Auto">
+        <Grid Margin="16,0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#07151B" Text="TR" />
           </Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center" IsVisible="{Binding !IsCompactNavigation}">
@@ -26,38 +26,51 @@
           </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1" Margin="10,18" Spacing="4">
-          <TextBlock Margin="10,0,0,6" Classes="muted" FontSize="11" Text="WORKSPACES" IsVisible="{Binding !IsCompactNavigation}" />
-          <Button Classes="rail" Command="{Binding ShowOverviewCommand}" Content="{Binding OverviewNavLabel}" AutomationProperties.Name="Overview" />
-          <Button Classes="rail" Command="{Binding ShowOperationsCommand}" Content="{Binding OperationsNavLabel}" AutomationProperties.Name="Operations" />
-          <Button Classes="rail" Command="{Binding ShowApprovalsCommand}" Content="{Binding ApprovalsNavLabel}" AutomationProperties.Name="Approvals" />
-          <Button Classes="rail" Command="{Binding ShowActivityCommand}" Content="{Binding ActivityNavLabel}" AutomationProperties.Name="Activity" />
+        <StackPanel Grid.Row="1" Margin="10,16" Spacing="3">
+          <TextBlock Margin="10,0,0,5" Classes="muted" FontSize="12" Text="Workspace" IsVisible="{Binding !IsCompactNavigation}" />
+          <Button Classes="rail" Classes.selected="{Binding IsOverviewSelected}" Command="{Binding ShowOverviewCommand}" AutomationProperties.Name="Overview" ToolTip.Tip="Overview">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Overview" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <Button Classes="rail" Classes.selected="{Binding IsOperationsSelected}" Command="{Binding ShowOperationsCommand}" AutomationProperties.Name="Operations" ToolTip.Tip="Operations">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M4,19H8V11H4V19M10,19H14V5H10V19M16,19H20V9H16V19M3,21V3H5V9H9V3H11V3H15V7H21V21H3Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Operations" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <Button Classes="rail" Classes.selected="{Binding IsApprovalsSelected}" Command="{Binding ShowApprovalsCommand}" AutomationProperties.Name="Approvals" ToolTip.Tip="Approvals">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Approvals" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <Button Classes="rail" Classes.selected="{Binding IsActivitySelected}" Command="{Binding ShowActivityCommand}" AutomationProperties.Name="Activity" ToolTip.Tip="Activity">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M3,13H7L10,4L14,20L17,13H21V11H15.5L14.5,14L10,0L5.5,11H3V13Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Activity" VerticalAlignment="Center"/></Grid>
+          </Button>
           <Separator Margin="8,12" Background="{DynamicResource BorderBrush}" />
-          <TextBlock Margin="10,0,0,6" Classes="muted" FontSize="11" Text="CONTROL" IsVisible="{Binding !IsCompactNavigation}" />
-          <Button Classes="rail" Command="{Binding ShowConnectionsCommand}" Content="{Binding ConnectionsNavLabel}" AutomationProperties.Name="Connections" />
-          <Button Classes="rail" Command="{Binding ShowRiskCommand}" Content="{Binding RiskNavLabel}" AutomationProperties.Name="Risk" />
-          <Button Classes="rail" Command="{Binding ShowSettingsCommand}" Content="{Binding SettingsNavLabel}" AutomationProperties.Name="Settings" />
+          <TextBlock Margin="10,0,0,5" Classes="muted" FontSize="12" Text="Configure" IsVisible="{Binding !IsCompactNavigation}" />
+          <Button Classes="rail" Classes.selected="{Binding IsConnectionsSelected}" Command="{Binding ShowConnectionsCommand}" AutomationProperties.Name="Connections" ToolTip.Tip="Connections">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M8,3A5,5 0 0 0 8,13H11V11H8A3,3 0 0 1 8,5H13A3,3 0 0 1 13,11H12V13H13A5,5 0 0 0 13,3H8M11,7V17H8V19H13V7H11Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Connections" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <Button Classes="rail" Classes.selected="{Binding IsRiskSelected}" Command="{Binding ShowRiskCommand}" AutomationProperties.Name="Risk" ToolTip.Tip="Risk">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M12,2L4,5V11C4,16.05 7.41,20.74 12,22C16.59,20.74 20,16.05 20,11V5L12,2M12,4.18L18,6.43V11C18,14.91 15.45,18.7 12,19.82C8.55,18.7 6,14.91 6,11V6.43L12,4.18M11,7V13H13V7H11M11,15V17H13V15H11Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Risk" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <Button Classes="rail" Classes.selected="{Binding IsSettingsSelected}" Command="{Binding ShowSettingsCommand}" AutomationProperties.Name="Settings" ToolTip.Tip="Settings">
+            <Grid ColumnDefinitions="24,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Data="M12,15.5A3.5,3.5 0 1 1 12,8.5A3.5,3.5 0 0 1 12,15.5M19.43,13A7.68,7.68 0 0 0 19.5,12A7.68,7.68 0 0 0 19.43,11L21.54,9.37L19.54,5.9L17.06,6.9A7.27,7.27 0 0 0 15.34,5.9L15,3.24H11L10.66,5.9A7.27,7.27 0 0 0 8.94,6.9L6.46,5.9L4.46,9.37L6.57,11A7.68,7.68 0 0 0 6.5,12A7.68,7.68 0 0 0 6.57,13L4.46,14.63L6.46,18.1L8.94,17.1A7.27,7.27 0 0 0 10.66,18.1L11,20.76H15L15.34,18.1A7.27,7.27 0 0 0 17.06,17.1L19.54,18.1L21.54,14.63L19.43,13Z"/><TextBlock Grid.Column="1" IsVisible="{Binding !IsCompactNavigation}" Text="Settings" VerticalAlignment="Center"/></Grid>
+          </Button>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Margin="18,14" Spacing="4" IsVisible="{Binding !IsCompactNavigation}">
-          <TextBlock Classes="muted" FontSize="11" Text="WRITES RESET ON LAUNCH" />
-          <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding TradingState}" TextWrapping="Wrap" />
-        </StackPanel>
+        <Border Grid.Row="2" Margin="12,12,12,16" Padding="12,10" CornerRadius="8" Background="{DynamicResource SurfaceBrush}" IsVisible="{Binding !IsCompactNavigation}">
+          <StackPanel Spacing="3"><TextBlock Classes="muted" FontSize="11" Text="New writes"/><TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding TradingState}" TextWrapping="Wrap"/></StackPanel>
+        </Border>
       </Grid>
     </Border>
 
-    <Border Grid.Column="1" Padding="20,0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="18">
+    <Border Grid.Column="1" Padding="22,0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="22">
         <StackPanel VerticalAlignment="Center" Spacing="2">
-          <TextBlock Classes="muted" FontSize="11" Text="EXCHANGE" />
+          <TextBlock Classes="muted" FontSize="11" Text="Exchange" />
           <TextBlock Classes="value" Text="{Binding SelectedProviderName}" />
         </StackPanel>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Classes="muted" FontSize="11" Text="ENVIRONMENT" />
+          <TextBlock Classes="muted" FontSize="11" Text="Environment" />
           <TextBlock Classes="value" Text="{Binding EnvironmentStatus}" />
         </StackPanel>
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Classes="muted" FontSize="11" Text="REST · STREAM · AUDIT" />
+          <TextBlock Classes="muted" FontSize="11" Text="REST · Stream · Audit" />
           <TextBlock Classes="value" Text="{Binding HealthSummary}" />
         </StackPanel>
         <Border Grid.Column="4" Classes="infoBadge" IsVisible="{Binding IsHeaderDemo}" Padding="12,7" VerticalAlignment="Center">
@@ -70,32 +83,28 @@
     </Border>
 
     <Grid Grid.Row="1" Grid.Column="1">
-      <ScrollViewer IsVisible="{Binding IsDashboardSelected}">
-        <StackPanel Margin="26" Spacing="20">
+      <ScrollViewer IsVisible="{Binding IsDashboardSelected}" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28,24" Spacing="20">
           <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="4"><TextBlock Classes="sectionTitle" Text="Overview"/><TextBlock Classes="muted" Text="Live-grade operating posture. Exchange writes remain explicitly session-enabled."/></StackPanel>
+            <StackPanel Spacing="5"><TextBlock Classes="sectionTitle" Text="Overview"/><TextBlock Classes="muted" MaxWidth="650" HorizontalAlignment="Left" Text="Live operating posture, local MCP health, and the controls that govern new exchange writes." TextWrapping="Wrap"/></StackPanel>
             <Button Grid.Column="1" Classes="danger" IsVisible="{Binding IsTradingEnabled}" Command="{Binding DisableTradingCommand}" Content="Disable New Trading Actions" />
           </Grid>
-          <Grid ColumnDefinitions="2*,3*" ColumnSpacing="18">
-            <StackPanel Spacing="16">
-              <Border Classes="panel" Padding="18"><StackPanel Spacing="12">
-                <TextBlock FontWeight="SemiBold" Text="Safety posture"/>
-                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Trading access"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding AccessStatus}"/></Grid>
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16">
+            <Border Classes="panel" Padding="20"><StackPanel Spacing="13">
+                <Grid ColumnDefinitions="*,Auto"><TextBlock FontSize="16" FontWeight="SemiBold" Text="Safety posture"/><Border Grid.Column="1" Classes="infoBadge" Padding="10,5"><TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding AccessStatus}"/></Border></Grid>
                 <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Open positions"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenPositionCount}"/></Grid>
                 <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Open orders"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding OpenOrderCount}"/></Grid>
                 <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" Text="Pending approvals"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding PendingApprovalCount}"/></Grid>
                 <Separator Background="{DynamicResource BorderBrush}"/>
                 <TextBlock Classes="muted" Text="{Binding TradingDetail}" TextWrapping="Wrap"/>
                 <CheckBox IsVisible="{Binding IsDemoEnvironment}" IsChecked="{Binding TradingAcknowledged}" Content="I understand this writes to Bybit Demo."/>
-                <Button Classes="primary" IsVisible="{Binding ShowDemoEnable}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
-                <Button Classes="danger" IsVisible="{Binding ShowLiveEnable}" Command="{Binding OpenLiveEnableDialogCommand}" Content="Review and enable Live"/>
+                <Button Classes="primary" HorizontalAlignment="Left" MinWidth="170" IsVisible="{Binding ShowDemoEnable}" Command="{Binding EnableDemoTradingCommand}" Content="Enable Demo trading"/>
+                <Button Classes="danger" HorizontalAlignment="Left" MinWidth="170" IsVisible="{Binding ShowLiveEnable}" Command="{Binding OpenLiveEnableDialogCommand}" Content="Review and enable Live"/>
               </StackPanel></Border>
-              <Border Classes="warningPanel" Padding="16"><TextBlock Classes="warningText" Text="Disabling or stopping TradeRelay blocks new writes only. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/></Border>
-            </StackPanel>
             <Border Grid.Column="1" Classes="panel" Padding="20"><StackPanel Spacing="14">
-              <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock FontWeight="SemiBold" Text="Local MCP server"/><TextBlock Classes="muted" Text="Loopback-only Streamable HTTP"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary" Command="{Binding StartServerCommand}" Content="Start MCP"/><Button Command="{Binding StopServerCommand}" Content="Stop"/></StackPanel></Grid>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="3"><TextBlock FontSize="16" FontWeight="SemiBold" Text="Local MCP server"/><TextBlock Classes="muted" Text="Loopback · authenticated HTTP" TextWrapping="Wrap"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary" Command="{Binding StartServerCommand}" Content="Start MCP"/><Button Command="{Binding StopServerCommand}" Content="Stop"/></StackPanel></Grid>
               <Separator Background="{DynamicResource BorderBrush}"/>
-              <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+              <Grid ColumnDefinitions="112,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="11">
                 <TextBlock Classes="muted" Text="State"/><TextBlock Grid.Column="1" Classes="value" Text="{Binding ServerState}"/>
                 <TextBlock Grid.Row="1" Classes="muted" Text="Endpoint"/><TextBlock Grid.Row="1" Grid.Column="1" Classes="value" Text="{Binding Endpoint}" TextWrapping="Wrap"/>
                 <TextBlock Grid.Row="2" Classes="muted" Text="Authentication"/><TextBlock Grid.Row="2" Grid.Column="1" Classes="value" Text="{Binding AuthenticationStatus}"/>
@@ -103,6 +112,7 @@
               </Grid>
               <TextBlock Classes="statusText" Text="{Binding ActionMessage}" TextWrapping="Wrap"/>
             </StackPanel></Border>
+            <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="warningPanel" Padding="16,13"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><PathIcon Width="18" Height="18" Foreground="{DynamicResource WarningBrush}" Data="M13,14H11V10H13V14M13,18H11V16H13V18M1,21H23L12,2L1,21Z"/><TextBlock Grid.Column="1" Classes="warningText" Text="Stopping TradeRelay blocks new writes only. It never cancels orders, closes positions, or removes protection." TextWrapping="Wrap"/></Grid></Border>
           </Grid>
         </StackPanel>
       </ScrollViewer>

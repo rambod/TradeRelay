@@ -25,7 +25,7 @@ Use the platform sans-serif throughout the product. Keep the scale compact: 12px
 
 ## Layout
 
-- Persistent health/status strip and an expanded Operations Rail at 1080×720 that compacts to accessible abbreviated labels at 900×640.
+- Persistent health/status strip and a fixed 216px Operations Rail at 1080×720 that becomes a 68px icon rail with accessible names and tooltips at 900×640.
 - Content margin: 24–32px; section gap: 20–24px; control gap: 8–12px.
 - Default window: 1080×720; minimum supported window: 900×640.
 - Use split list/detail layouts for review workflows and grouped forms for settings.

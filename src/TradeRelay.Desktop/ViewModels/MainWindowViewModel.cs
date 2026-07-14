@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TradeRelay.Core.Models;
@@ -147,7 +148,7 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     public bool IsOverviewSelected => IsDashboardSelected;
     public bool IsConnectionsSelected => IsCredentialsSelected;
-    public double NavigationRailWidth => IsCompactNavigation ? 76 : 208;
+    public GridLength NavigationRailWidth => new(IsCompactNavigation ? 68 : 216);
     public string OverviewNavLabel => IsCompactNavigation ? "OV" : "Overview";
     public string OperationsNavLabel => IsCompactNavigation ? "OP" : "Operations";
     public string ApprovalsNavLabel => IsCompactNavigation ? "AP" : "Approvals";
@@ -213,7 +214,9 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Gets the startup trading access mode.
     /// </summary>
-    public string AccessStatus => IsSelectedProviderWriteCapable ? (_tradingControl.Snapshot.Enabled ? TradingAccessMode.TradingEnabled : TradingAccessMode.TradingDisabled).ToString() : TradingAccessMode.ReadOnly.ToString();
+    public string AccessStatus => IsSelectedProviderWriteCapable
+        ? (_tradingControl.Snapshot.Enabled ? "Trading enabled" : "Trading disabled")
+        : "Read only";
 
     public string TradingState => _tradingControl.Snapshot.StateLabel;
     public string TradingDetail => _tradingControl.Snapshot.LastError ?? $"{SelectedEnvironment} write tools are available for this session.";
@@ -261,11 +264,17 @@ internal sealed partial class MainWindowViewModel : ObservableObject, IDisposabl
 
     public string RestHealth => _providerSnapshot.RestHealth.ToString();
     public string StreamHealth => _providerSnapshot.StreamHealth.ToString();
-    public string HealthSummary => $"{RestHealth} · {StreamHealth} · {(_auditLog.Health.Healthy ? "Healthy" : "Unavailable")}";
+    public string HealthSummary => $"{FormatHealth(_providerSnapshot.RestHealth)} · {FormatHealth(_providerSnapshot.StreamHealth)} · {(_auditLog.Health.Healthy ? "Healthy" : "Unavailable")}";
     public string SavedKeyPreview => _providerSnapshot.SavedKeyPreview ?? "None";
     public string CredentialStorageStatus => _connectionManager.Snapshot.CredentialLoaded
         ? (_settings.Bybit.RememberCredentials ? "Protected on this device" : "Session only")
         : (_connectionManager.Snapshot.CredentialInfo is null ? "Not saved" : "Session only");
+
+    private static string FormatHealth(ServiceHealthState state) => state switch
+    {
+        ServiceHealthState.NotConfigured => "Not configured",
+        _ => state.ToString(),
+    };
 
     /// <summary>
     /// Gets the bearer token or its masked representation.

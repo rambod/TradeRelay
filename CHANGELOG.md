@@ -2,6 +2,19 @@
 
 All notable changes are documented here. TradeRelay uses semantic versioning; milestone tags before `1.0.0` are development releases.
 
+## [1.4.1] - 2026-07-14
+
+### Fixed
+
+- Restored the approved Operations Rail with fixed pixel sizing, a compact icon mode, visible page selection, and accessible tooltips.
+- Rebalanced the Overview workspace so status text, endpoints, safety controls, and buttons remain readable at both 1080×720 and 900×640.
+- Standardized button, input, disabled, focus, typography, and panel geometry across the desktop shell.
+- Added horizontal containment for the dense Operations position table at the minimum supported window size.
+
+### Changed
+
+- Reworked the README around installation, first run, exchange capabilities, and the safety boundary.
+
 ## [1.4.0] - 2026-07-13
 
 ### Added

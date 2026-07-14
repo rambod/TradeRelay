@@ -13,8 +13,13 @@ public sealed partial class ReleaseEngineeringTests
     {
         XDocument shared = XDocument.Load(Path.Combine(Root, "Directory.Build.props"));
         string version = shared.Descendants("Version").Single().Value;
+        string readme = File.ReadAllText(Path.Combine(Root, "README.md"));
         Assert.Matches("^[0-9]+\\.[0-9]+\\.[0-9]+$", version);
-        Assert.Contains($"Current version: `{version}`", File.ReadAllText(Path.Combine(Root, "README.md")), StringComparison.Ordinal);
+        Assert.Contains($"Current version: `{version}`", readme, StringComparison.Ordinal);
+        foreach (string runtime in new[] { "osx-arm64.zip", "osx-x64.zip", "win-arm64.zip", "win-x64.zip", "linux-arm64.tar.gz", "linux-x64.tar.gz" })
+        {
+            Assert.Contains($"TradeRelay-{version}-{runtime}", readme, StringComparison.Ordinal);
+        }
         Assert.Equal("TradeRelay", shared.Descendants("Product").Single().Value);
         Assert.Equal("true", shared.Descendants("Deterministic").Single().Value);
         Assert.Equal("true", shared.Descendants("TreatWarningsAsErrors").Single().Value);

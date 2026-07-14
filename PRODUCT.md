@@ -20,6 +20,8 @@ Version 1.3 pairs local agent clients through scoped OAuth and installs one cano
 
 Version 1.4 connects Bybit, Binance, and KuCoin concurrently for operator inspection. Binance and KuCoin are Live read-only adapters; Bybit remains the sole write-capable provider and retains the authoritative safety pipeline.
 
+Version 1.4.1 restores the approved compact Operations Rail, corrects minimum-window layout failures, and makes release downloads the first path in project documentation.
+
 ## Brand Personality
 
 Calm, precise, protective. The product should communicate expert confidence without trading hype, alarm fatigue, or decorative complexity.

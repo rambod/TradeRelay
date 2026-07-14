@@ -1,164 +1,120 @@
 # TradeRelay
 
-<img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="128" height="128">
+<p align="center">
+  <img src="assets/branding/TradeRelay.png" alt="TradeRelay icon" width="112" height="112">
+</p>
 
-TradeRelay is a safety-first local desktop operator console that connects MCP-capable coding agents to exchange state and explicitly approved trading workflows. Version `1.4.0` can inspect Bybit, Binance, and KuCoin concurrently while preserving Bybit as the only write-capable adapter.
-
-TradeRelay is not a hosted trading service, autonomous strategy, signal provider, or financial adviser. It does not persist trading enablement, blindly retry ambiguous submissions, or clean up exchange orders when the application stops.
+TradeRelay is a local desktop control plane for exchange accounts and MCP-capable agents. It lets an operator inspect market and account state, review risk, approve immutable trading plans, and audit every action without giving an agent unrestricted exchange access.
 
 > [!CAUTION]
-> Live trading can affect real funds and positions. Start with Bybit Demo, use narrowly scoped API keys, and never use a key with withdrawal permission. TradeRelay rejects withdrawal-enabled keys.
+> Live trading can affect real funds. TradeRelay starts with all exchange writes disabled after every launch. Bybit is the only write-capable adapter; Binance and KuCoin are read-only.
 
-## Safety model
+## Download
 
-- Every launch starts with Demo and Live writes disabled.
-- The MCP server binds only to `127.0.0.1` and requires a random bearer token.
-- New orders originate from immutable, expiring prepared plans and use centralized risk, approval, audit, and reconciliation controls.
-- Live enablement requires a desktop readiness review and the exact phrase `ENABLE LIVE TRADING`.
-- Live cancel-all and close-position actions require short-lived desktop confirmation tickets.
-- `Disable New Trading Actions` blocks new exchange writes immediately; it does not cancel orders, close positions, or remove protection.
-- REST order acknowledgements remain provisional. TradeRelay uses private-stream evidence and one REST fallback lookup, never a blind placement retry.
+Version **1.4.1** ships as portable, self-contained applications. No .NET installation is required.
 
-See [the complete security model](docs/SECURITY_MODEL.md).
+Current version: `1.4.1`
 
-## Screenshots
-
-Disabled Demo dashboard:
-
-![TradeRelay disabled Demo dashboard](docs/images/demo-dashboard.png)
-
-Live enablement confirmation:
-
-![TradeRelay Live confirmation flow](docs/images/live-confirmation.png)
-
-Both release screenshots use masked tokens and contain no credentials or account data.
-
-## Supported platforms and clients
-
-Official portable builds are self-contained, untrimmed, non-AOT, and available for ARM64 and x64:
-
-| Platform | Primary support | Archive |
+| Platform | Architecture | Download |
 | --- | --- | --- |
-| macOS | macOS 14+ | ZIP containing exactly `TradeRelay.app` |
-| Windows | Windows 11 24H2+ | Portable ZIP |
-| Linux | Ubuntu 24.04 under X11 or XWayland | Portable `.tar.gz` |
+| macOS 14+ | Apple Silicon | [TradeRelay-1.4.1-osx-arm64.zip](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-osx-arm64.zip) |
+| macOS 14+ | Intel | [TradeRelay-1.4.1-osx-x64.zip](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-osx-x64.zip) |
+| Windows 11 | x64 | [TradeRelay-1.4.1-win-x64.zip](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-win-x64.zip) |
+| Windows 11 | ARM64 | [TradeRelay-1.4.1-win-arm64.zip](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-win-arm64.zip) |
+| Ubuntu 24.04 | x64 | [TradeRelay-1.4.1-linux-x64.tar.gz](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-linux-x64.tar.gz) |
+| Ubuntu 24.04 | ARM64 | [TradeRelay-1.4.1-linux-arm64.tar.gz](https://github.com/rambod/TradeRelay/releases/latest/download/TradeRelay-1.4.1-linux-arm64.tar.gz) |
 
-Codex, Claude Code, and Gemini CLI are supported local MCP clients. TradeRelay can preview and install its MCP entry and operator skill for each client, then pair it with OAuth. Other local clients may work when they support Streamable HTTP OAuth or an environment-derived bearer header.
+[Download checksums](https://github.com/rambod/TradeRelay/releases/latest/download/SHA256SUMS) · [View the latest release](https://github.com/rambod/TradeRelay/releases/latest)
 
-## Install and verify
-
-Download the archive for your platform plus `SHA256SUMS` from the GitHub Release. Verify it before opening:
-
-```bash
-sha256sum -c SHA256SUMS
-```
-
-On macOS, `shasum -a 256 TradeRelay-1.4.0-osx-arm64.zip` can be compared with the matching line. On Windows, use `Get-FileHash .\TradeRelay-1.4.0-win-x64.zip -Algorithm SHA256`.
-
-Packages clearly report their signing state in `release-metadata.json`. Unsigned builds are permitted when maintainers have not configured signing credentials; the operating system may show an unverified-publisher warning. Do not bypass a warning unless the checksum matches the official release.
-
-Linux archives install nothing automatically. Extract the archive, read `README-LINUX.txt`, and run `./launch-traderelay`. Ubuntu dependencies are documented there and in [development documentation](docs/DEVELOPMENT.md).
+Release metadata states whether each package is signed. Unsigned packages are supported, but the operating system may show an unknown-publisher warning. Verify `SHA256SUMS` before opening one.
 
 ## First run
 
-1. Open TradeRelay. Trading is disabled.
-2. Keep the environment on **Demo**.
-3. Add a separate Bybit Demo API key without withdrawal permission. Session-only storage is the default.
-4. Test and save the connection.
-5. Review Risk settings.
-6. Start the local MCP server.
-7. In **Connections → Agent clients**, preview and install Codex, Claude Code, or Gemini CLI, then approve the OAuth pairing with Read & Plan scopes. Use the legacy bearer token under Advanced only when a client cannot pair.
-8. Prepare and review simulated plans before explicitly enabling Demo trading.
+1. Open TradeRelay. New trading actions are disabled.
+2. Open **Connections** and connect an exchange account. Session-only credential storage is the default.
+3. Review **Risk** settings before preparing an order.
+4. Start the local MCP server from **Overview**.
+5. Under **Connections → Agent clients**, install and pair Codex, Claude Code, or Gemini CLI.
+6. Inspect account state and prepare plans before deliberately enabling Demo or Live Bybit trading.
 
-For Live, select Live credentials, verify every warning, review the complete risk summary, and use the exact desktop confirmation. Use **Disable New Trading Actions** whenever you no longer need writes.
+Start with Bybit Demo when learning the workflow. Never use an API key with withdrawal permission.
+
+## What TradeRelay provides
+
+- A compact operator console for positions, orders, fills, protection, approvals, activity, and runtime errors.
+- Concurrent read-only inspection of Bybit, Binance USD-M Futures, and KuCoin USDT Futures.
+- Immutable, expiring prepared orders with instrument-aware normalization and account-risk checks.
+- Desktop-only approval and session-only trading enablement.
+- Loopback MCP over authenticated Streamable HTTP.
+- OAuth pairing and direct per-user installation for Codex, Claude Code, and Gemini CLI.
+- Append-only activity auditing, safe logs, reconciliation, and secret-free diagnostics.
+
+TradeRelay is not a hosted trading service, strategy, signal provider, autonomous trader, or financial adviser. It does not blindly retry ambiguous submissions or automatically cancel orders when the application closes.
 
 ## Exchange capabilities
 
-| Exchange | Profiles | Read capabilities | Writes |
+| Exchange | Environments | Read access | Write access |
 | --- | --- | --- | --- |
-| Bybit | Demo and Live | Market, account, positions, orders, history, executions, private stream | Guarded Demo/Live writes |
-| Binance | Live | USD-M Futures market, account, balances, positions, open orders, history, executions, private stream | Not supported |
-| KuCoin | Live | USDT Futures market, account, balance, positions, open orders, history, executions, private stream | Not supported |
+| Bybit | Demo and Live | Market, account, positions, orders, history, executions, private stream | Guarded Demo and Live |
+| Binance | Live | USD-M market, account, positions, orders, history, executions, private stream | Not supported |
+| KuCoin | Live | USDT Futures market, account, positions, orders, history, executions, private stream | Not supported |
 
-All providers use normalized Core contracts and can connect concurrently. MCP read tools accept an optional `exchange`; omission uses the selected provider. Every write tool remains Bybit-only, and an explicit Binance or KuCoin write fails with `CAPABILITY_NOT_SUPPORTED` before a write lease or provider call.
+Supplying Binance or KuCoin to a write tool returns `CAPABILITY_NOT_SUPPORTED` before a write lease or provider call.
 
-## Local data and privacy
+## Safety boundary
 
-TradeRelay has no telemetry or crash-upload service. Non-secret settings, protected credential integrations, daily safe logs, JSONL activity audit, and diagnostics are stored under:
+- The MCP server binds only to `127.0.0.1`.
+- Every launch resets Demo and Live write enablement.
+- Live enablement requires a desktop readiness review and the exact phrase `ENABLE LIVE TRADING`.
+- Orders originate from approved, immutable prepared plans.
+- Live cancel-all and position-close actions require a separate short-lived desktop confirmation.
+- A successful pre-action audit write is mandatory before an exchange write.
+- REST acknowledgements remain provisional until private-stream or REST reconciliation.
+- `Disable New Trading Actions` blocks new writes; it does not cancel orders, close positions, or remove protection.
 
-- macOS: `~/Library/Application Support/TradeRelay`
-- Windows: `%LOCALAPPDATA%\TradeRelay`
-- Linux: `~/.config/TradeRelay`
+Read the full [security model](docs/SECURITY_MODEL.md) before enabling Live trading.
 
-Diagnostics exports exclude credentials, tokens, authorization data, signatures, raw authenticated payloads, raw audit events, and log files.
+## Agent setup
 
-## MCP setup
+TradeRelay detects supported local clients and previews every command and target before installation. New OAuth pairings receive `traderelay.read` and `traderelay.plan`; the `traderelay.trade` scope requires explicit re-pairing and still cannot bypass desktop safety controls.
 
-OAuth pairing is the preferred authentication path. TradeRelay discovers local Codex, Claude Code, and Gemini CLI installations, previews every command and target, and installs only after explicit confirmation. New pairings receive Read & Plan scopes; Trade requires deliberate re-pairing and never bypasses desktop trading enablement or approval.
+- [Codex setup](docs/CODEX_SETUP.md)
+- [Claude Code setup](docs/CLAUDE_CODE_SETUP.md)
+- [Gemini CLI setup](docs/GEMINI_CLI_SETUP.md)
+- [TradeRelay operator skill](integrations/skills/traderelay-operator/SKILL.md)
 
-For legacy clients, set the compatibility token in the client process environment without writing its value into client configuration:
+Legacy bearer authentication remains available under **Connections → Advanced compatibility**. The default endpoint is `http://127.0.0.1:5050/mcp`.
 
-```bash
-export TRADERELAY_MCP_TOKEN='paste-the-current-token'
-```
+## Local data
 
-The default endpoint is `http://127.0.0.1:5050/mcp`. Settings can change the stopped server port from `1024` through `65535` or enable automatic MCP startup. Automatic startup never enables trading. See [Codex](docs/CODEX_SETUP.md), [Claude Code](docs/CLAUDE_CODE_SETUP.md), and [Gemini CLI](docs/GEMINI_CLI_SETUP.md) setup.
+TradeRelay has no telemetry or crash-upload service.
+
+| Platform | Application data |
+| --- | --- |
+| macOS | `~/Library/Application Support/TradeRelay` |
+| Windows | `%LOCALAPPDATA%\TradeRelay` |
+| Linux | `~/.config/TradeRelay` |
+
+Credentials and refresh tokens use protected operating-system storage when available. Settings, logs, diagnostics, and audit events exclude credentials, bearer tokens, signatures, authorization headers, raw authenticated payloads, exception messages, and stack traces.
 
 ## Development
 
-The repository pins .NET SDK `10.0.301` and NuGet lock files:
+Requirements: .NET SDK `10.0.301` from `global.json`.
 
 ```bash
 dotnet restore --locked-mode
 dotnet build --configuration Release --no-restore
 dotnet test --configuration Release --no-build
 dotnet format --no-restore --verify-no-changes
-```
-
-Run the desktop shell:
-
-```bash
 dotnet run --project src/TradeRelay.Desktop
 ```
 
-Project structure:
+Provider-specific payloads, transports, and SDK types remain inside `TradeRelay.Providers.*`. Core and MCP use exchange-neutral contracts. Bybit retains the only trading implementation.
 
-```text
-src/TradeRelay.Desktop/         Avalonia shell, in-process MCP host, and application services
-src/TradeRelay.Core/            Exchange-neutral domain, settings, risk, and safety contracts
-src/TradeRelay.Providers.Bybit/ Bybit adapter boundary; all Bybit.Net types remain here
-src/TradeRelay.Providers.Binance/ Binance USD-M Futures read-only adapter
-src/TradeRelay.Providers.KuCoin/ KuCoin USDT Futures read-only adapter
-tests/TradeRelay.Tests/         Unit and loopback integration tests
-integrations/skills/            Canonical cross-client TradeRelay operator skill
-eng/                            Reproducible scans, manifests, and packaging scripts
-packaging/                      Portable-platform metadata
-```
-
-See [development](docs/DEVELOPMENT.md) and [contributing](CONTRIBUTING.md) for the full workflow.
-
-## Release status
-
-Current version: `1.4.0`
-
-| Milestone | Version |
-| --- | --- |
-| Scaffold and naming correction | `0.1.0` |
-| Control panel and MCP host | `0.2.0` |
-| Credentials and read-only exchange connection | `0.3.0` |
-| Risk engine and order preparation | `0.4.0` |
-| Demo execution | `0.5.0` |
-| Live safety | `0.6.0` |
-| Production-ready open-source release | `1.0.0` |
-| Operator console and provider foundation | `1.1.0` |
-| Operations lifecycle audit and Error Center | `1.2.0` |
-| OAuth pairing, direct client installation, and operator skill | `1.3.0` |
-| Binance and KuCoin read-only adapters | `1.4.0` |
-
-Release maintainers should follow [the release procedure](docs/RELEASE.md). Automated real-Live write tests are prohibited.
+See [development](docs/DEVELOPMENT.md), [contributing](CONTRIBUTING.md), [release procedure](docs/RELEASE.md), and the [changelog](CHANGELOG.md).
 
 ## License and disclaimer
 
-TradeRelay is licensed under the [MIT License](LICENSE).
+TradeRelay is available under the [MIT License](LICENSE).
 
-Trading involves substantial risk. Software defects, network failures, exchange behavior, slippage, gaps, liquidation, fees, funding, and operator error can cause loss. You remain responsible for API-key permissions, configuration, order review, exchange state, and all resulting gains or losses.
+Trading involves substantial risk. Network failures, exchange behavior, slippage, gaps, liquidation, fees, funding, software defects, and operator error can cause loss. You remain responsible for credentials, configuration, approvals, exchange state, and all resulting gains or losses.

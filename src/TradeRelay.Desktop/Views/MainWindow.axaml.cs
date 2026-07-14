@@ -16,7 +16,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         SizeChanged += (_, _) =>
         {
-            if (DataContext is MainWindowViewModel viewModel) viewModel.SetCompactNavigation(ClientSize.Width < 980);
+            if (DataContext is MainWindowViewModel viewModel) viewModel.SetCompactNavigation(ClientSize.Width < 1000);
         };
     }
 
@@ -30,6 +30,6 @@ public sealed partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(viewModel);
 
         DataContext = viewModel;
-        viewModel.SetCompactNavigation(ClientSize.Width < 980);
+        viewModel.SetCompactNavigation(ClientSize.Width < 1000);
     }
 }
